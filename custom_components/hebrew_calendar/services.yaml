@@ -1,0 +1,176 @@
+# שירותים עבור Hebrew Calendar Events Integration
+# קובץ זה מגדיר את כל השירותים הזמינים ב-HA Developer Tools
+
+add_event:
+  name: הוסף אירוע
+  description: הוספת אירוע חדש ללוח שנה עברי
+  fields:
+    event_name:
+      name: שם האירוע
+      description: השם שיוצג עבור האירוע
+      required: true
+      example: "יום הולדת יוסי"
+      selector:
+        text:
+    event_type:
+      name: סוג האירוע
+      description: קטגוריה של האירוע
+      required: true
+      example: "יום הולדת"
+      selector:
+        select:
+          options:
+            - "יום הולדת"
+            - "יארצייט"
+            - "יום נישואין"
+            - "חג"
+            - "אחר"
+    hebrew_day:
+      name: יום עברי
+      description: היום בחודש העברי (1-30)
+      required: true
+      example: 15
+      selector:
+        number:
+          min: 1
+          max: 30
+    hebrew_month:
+      name: חודש עברי
+      description: "החודש העברי (1=תשרי, 7=ניסן)"
+      required: true
+      example: 1
+      selector:
+        number:
+          min: 1
+          max: 13
+    hebrew_year:
+      name: שנה עברית
+      description: שנה עברית (רק לאירועים חד-פעמיים)
+      required: false
+      example: 5784
+      selector:
+        number:
+          min: 5700
+          max: 6000
+    is_recurring:
+      name: אירוע חוזר
+      description: האם האירוע חוזר כל שנה
+      required: false
+      default: true
+      selector:
+        boolean:
+    reminders:
+      name: תזכורות
+      description: רשימת מספרי ימים לפני האירוע לתזכורת
+      required: false
+      example: [7, 1]
+      selector:
+        object:
+
+edit_event:
+  name: ערוך אירוע
+  description: עריכת אירוע קיים לפי מזהה
+  fields:
+    event_id:
+      name: מזהה האירוע
+      description: ה-UUID של האירוע לעריכה
+      required: true
+      example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      selector:
+        text:
+    event_name:
+      name: שם האירוע
+      required: true
+      selector:
+        text:
+    event_type:
+      name: סוג האירוע
+      required: true
+      selector:
+        select:
+          options:
+            - "יום הולדת"
+            - "יארצייט"
+            - "יום נישואין"
+            - "חג"
+            - "אחר"
+    hebrew_day:
+      name: יום עברי
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 30
+    hebrew_month:
+      name: חודש עברי
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 13
+    hebrew_year:
+      name: שנה עברית
+      required: false
+      selector:
+        number:
+          min: 5700
+          max: 6000
+    is_recurring:
+      name: אירוע חוזר
+      required: false
+      default: true
+      selector:
+        boolean:
+    reminders:
+      name: תזכורות
+      required: false
+      selector:
+        object:
+
+remove_event:
+  name: מחק אירוע
+  description: מחיקת אירוע לפי מזהה
+  fields:
+    event_id:
+      name: מזהה האירוע
+      description: ה-UUID של האירוע למחיקה
+      required: true
+      selector:
+        text:
+
+add_reminder:
+  name: הוסף תזכורת
+  description: הוספת תזכורת לאירוע קיים
+  fields:
+    event_id:
+      name: מזהה האירוע
+      required: true
+      selector:
+        text:
+    reminder_days:
+      name: ימים לפני האירוע
+      description: כמה ימים לפני האירוע לשלוח את התזכורת
+      required: true
+      example: 7
+      selector:
+        number:
+          min: 0
+          max: 365
+
+remove_reminder:
+  name: הסר תזכורת
+  description: הסרת תזכורת מאירוע
+  fields:
+    event_id:
+      name: מזהה האירוע
+      required: true
+      selector:
+        text:
+    reminder_days:
+      name: ימים לפני האירוע
+      description: מספר הימים של התזכורת להסרה
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 365

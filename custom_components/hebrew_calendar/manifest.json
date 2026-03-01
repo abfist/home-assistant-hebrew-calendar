@@ -1,0 +1,13 @@
+{
+  "domain": "hebrew_calendar",
+  "name": "Hebrew Calendar Events",
+  "version": "1.0.0",
+  "documentation": "https://github.com/your-repo/hebrew-calendar-ha",
+  "issue_tracker": "https://github.com/your-repo/hebrew-calendar-ha/issues",
+  "dependencies": [],
+  "codeowners": [],
+  "requirements": ["pyluach>=1.3.0"],
+  "config_flow": true,
+  "iot_class": "local_push",
+  "homeassistant": "2023.1.0"
+}

@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Hebrew Calendar Events",
+        "description": "Set up the Hebrew Calendar Events integration to manage events with Hebrew dates.\n\nAfter installation, you can manage events, reminders, and automations based on Hebrew dates."
+      }
+    },
+    "abort": {
+      "already_configured": "Hebrew Calendar is already configured"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "hebrew_calendar_events": {
+        "name": "Hebrew Calendar Events"
+      },
+      "hebrew_calendar_today": {
+        "name": "Today's Hebrew Events"
+      },
+      "hebrew_calendar_upcoming": {
+        "name": "Upcoming Hebrew Events"
+      }
+    },
+    "calendar": {
+      "hebrew_calendar": {
+        "name": "Hebrew Calendar"
+      }
+    }
+  }
+}

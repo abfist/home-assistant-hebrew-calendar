@@ -1,0 +1,10 @@
+{
+  "name": "Hebrew Calendar Events",
+  "description": "ניהול אירועים עם תאריכים עבריים עבור Home Assistant",
+  "render_readme": true,
+  "domains": ["hebrew_calendar"],
+  "documentation": "https://github.com/your-repo/hebrew-calendar-ha",
+  "issue_tracker": "https://github.com/your-repo/hebrew-calendar-ha/issues",
+  "homeassistant": "2023.1.0",
+  "version": "1.0.0"
+}

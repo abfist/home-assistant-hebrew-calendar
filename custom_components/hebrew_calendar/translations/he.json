@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Hebrew Calendar Events",
+        "description": "התקנת אינטגרציה לניהול אירועים בלוח שנה עברי.\n\nלאחר ההתקנה תוכל לנהל אירועים, תזכורות ואוטומציות על בסיס תאריכים עבריים."
+      }
+    },
+    "abort": {
+      "already_configured": "Hebrew Calendar כבר מוגדר"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "hebrew_calendar_events": {
+        "name": "Hebrew Calendar Events"
+      },
+      "hebrew_calendar_today": {
+        "name": "אירועי היום"
+      },
+      "hebrew_calendar_upcoming": {
+        "name": "אירועים קרובים"
+      }
+    },
+    "calendar": {
+      "hebrew_calendar": {
+        "name": "לוח שנה עברי"
+      }
+    }
+  }
+}
