@@ -1,770 +1,413 @@
 /**
  * Hebrew Calendar Card - Lovelace Custom Card
  * =============================================
- * כרטיס Lovelace לניהול אירועים בלוח שנה עברי.
- * 
- * תכונות:
- * - הצגת רשימת כל האירועים
- * - הוספה, עריכה ומחיקה של אירועים
- * - ניהול תזכורות לכל אירוע
- * - תצוגה בעברית עם RTL
- * 
- * שימוש ב-Lovelace:
- * type: custom:hebrew-calendar-card
- * entity: sensor.hebrew_calendar_events
+ * הטופס רץ כ-dialog נפרד על ה-body — מחוץ ל-Shadow DOM —
+ * כך שרענון הכרטיס לא משפיע עליו כלל.
  */
 
 const HEBREW_MONTHS = {
-  7: 'תשרי', 8: 'חשון', 9: 'כסלו', 10: 'טבת', 11: 'שבט',
-  12: 'אדר', 1: 'ניסן', 2: 'אייר', 3: 'סיון', 4: 'תמוז',
-  5: 'אב', 6: 'אלול', 13: 'אדר א׳'
+  7:'תשרי',8:'חשון',9:'כסלו',10:'טבת',11:'שבט',
+  13:'אדר א׳',12:'אדר',1:'ניסן',2:'אייר',3:'סיון',
+  4:'תמוז',5:'אב',6:'אלול'
 };
 
-const EVENT_TYPES = ['יום הולדת', 'יארצייט', 'יום נישואין', 'חג', 'אחר'];
+function getMonthName(month, year) {
+  return map[month] || String(month);
+}
 
+// function getMonthName(month, year) {
+//   const isLeap = year ? ((7 * year + 1) % 19 < 7) : true;
+//   const map = isLeap ? HEBREW_MONTHS_LEAP : HEBREW_MONTHS_REGULAR;
+//   return map[month] || String(month);
+// }
+
+const EVENT_TYPES = ['יום הולדת','יארצייט','יום נישואין','חג','אחר'];
 const DOMAIN = 'hebrew_calendar';
 
-/**
- * הכרטיס הראשי - Hebrew Calendar Card
- * מנהל את כל הלוגיקה וה-UI של הכרטיס.
- */
+/* ============================================================
+   HebrewCalendarDialog — טופס הוספה/עריכה כ-element נפרד על ה-body
+   כך שרענון הכרטיס לא נוגע בו כלל
+   ============================================================ */
+class HebrewCalendarDialog extends HTMLElement {
+  constructor() {
+    super();
+    this._hass = null;
+    this._editingEvent = null;
+    this._reminders = [];
+    this._onClose = null; // callback לסגירה
+  }
+
+  /** פתיחת הדיאלוג */
+  open(hass, editingEvent, onClose) {
+    this._hass = hass;
+    this._editingEvent = editingEvent || null;
+    this._reminders = editingEvent ? [...(editingEvent.reminders || [])] : [];
+    this._onClose = onClose;
+    document.body.appendChild(this);
+    this._render();
+  }
+
+  /** סגירת הדיאלוג */
+  close() {
+    if (this._onClose) this._onClose();
+    if (this.parentNode) this.parentNode.removeChild(this);
+  }
+
+  /** קריאה לשירות HA */
+  async _callService(service, data) {
+    await this._hass.callService(DOMAIN, service, data);
+  }
+
+  /** שמירת האירוע */
+  async _save() {
+    const g = (id) => this.querySelector('#' + id);
+    const name = g('hc-name')?.value?.trim();
+    const type = g('hc-type')?.value;
+    const day  = parseInt(g('hc-day')?.value);
+    const month= parseInt(g('hc-month')?.value);
+    const yearV= g('hc-year')?.value;
+    const year = yearV ? parseInt(yearV) : null;
+    const recurring = g('hc-recurring')?.checked !== false;
+
+    if (!name || !type || !day || !month) {
+      g('hc-error').textContent = 'יש למלא את כל השדות החובה';
+      g('hc-error').style.display = 'block';
+      return;
+    }
+    if (!recurring && !year) {
+      g('hc-error').textContent = 'אירוע חד-פעמי חייב שנה עברית';
+      g('hc-error').style.display = 'block';
+      return;
+    }
+
+    const data = { event_name:name, event_type:type, hebrew_day:day,
+                   hebrew_month:month, is_recurring:recurring,
+                   reminders:this._reminders };
+    if (year) data.hebrew_year = year;
+
+    try {
+      if (this._editingEvent) {
+        await this._callService('edit_event', { event_id: this._editingEvent.id, ...data });
+      } else {
+        await this._callService('add_event', data);
+      }
+      this.close();
+    } catch(e) {
+      g('hc-error').textContent = 'שגיאה: ' + e.message;
+      g('hc-error').style.display = 'block';
+    }
+  }
+
+  /** הוספת תזכורת */
+  _addReminder() {
+    const input = this.querySelector('#hc-reminder-input');
+    const days = parseInt(input?.value);
+    if (isNaN(days) || days < 0) return;
+    if (this._reminders.includes(days)) return;
+    this._reminders = [...this._reminders, days].sort((a,b)=>a-b);
+    input.value = '';
+    this._updateRemindersList();
+  }
+
+  /** עדכון רשימת תזכורות בלי re-render מלא */
+  _updateRemindersList() {
+    const el = this.querySelector('#hc-reminders-list');
+    if (el) el.innerHTML = this._remindersHTML();
+    this._bindReminderRemove();
+  }
+
+  _remindersHTML() {
+    if (!this._reminders.length)
+      return '<span style="color:#888;font-size:.8em">אין תזכורות</span>';
+    return this._reminders.map(d =>
+      `<span class="hc-tag">${d===0?'ביום האירוע':d+' ימים לפני'}
+        <button class="hc-tag-rm" data-days="${d}">✕</button>
+      </span>`
+    ).join('');
+  }
+
+  _bindReminderRemove() {
+    this.querySelectorAll('.hc-tag-rm').forEach(btn => {
+      btn.onclick = () => {
+        this._reminders = this._reminders.filter(d => d !== parseInt(btn.dataset.days));
+        this._updateRemindersList();
+      };
+    });
+  }
+
+  _render() {
+    const ev = this._editingEvent;
+    const title = ev ? `עריכת: ${ev.event_name}` : 'הוספת אירוע חדש';
+
+    const monthOptions = Object.entries(HEBREW_MONTHS_LEAP)
+      .map(([n,name]) => `<option value="${n}">${name}</option>`).join('');
+    const typeOptions = EVENT_TYPES
+      .map(t => `<option value="${t}">${t}</option>`).join('');
+
+    this.innerHTML = `
+      <style>
+        .hc-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;
+          display:flex;align-items:center;justify-content:center;padding:16px}
+        .hc-box{background:#fff;border-radius:12px;padding:20px;width:100%;max-width:460px;
+          max-height:90vh;overflow-y:auto;direction:rtl;color:#111;font-family:sans-serif}
+        .hc-title{font-size:1.1em;font-weight:bold;margin-bottom:16px}
+        .hc-row{margin-bottom:12px}
+        .hc-row label{display:block;font-size:.82em;color:#555;margin-bottom:3px}
+        .hc-row input,.hc-row select{width:100%;padding:7px 10px;border:1px solid #ccc;
+          border-radius:6px;font-size:.95em;box-sizing:border-box;direction:rtl;background:#fff}
+        .hc-row input:focus,.hc-row select:focus{outline:none;border-color:#3b82f6}
+        .hc-half{display:flex;gap:8px}
+        .hc-half .hc-row{flex:1}
+        .hc-check{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+        .hc-check input{width:auto}
+        .hc-rem-row{display:flex;gap:8px;align-items:flex-end}
+        .hc-rem-row .hc-row{flex:1;margin:0}
+        .hc-add-btn{background:#3b82f6;color:#fff;border:none;border-radius:6px;
+          padding:7px 14px;cursor:pointer;white-space:nowrap;font-size:.9em}
+        #hc-reminders-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:26px}
+        .hc-tag{background:#f0f0f0;border-radius:16px;padding:3px 8px 3px 6px;
+          font-size:.82em;display:inline-flex;align-items:center;gap:4px}
+        .hc-tag-rm{background:none;border:none;cursor:pointer;color:#888;font-size:13px;padding:0}
+        #hc-error{color:red;font-size:.82em;background:#fff0f0;padding:6px;
+          border-radius:4px;margin-top:8px;display:none}
+        .hc-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+        .hc-save{background:#3b82f6;color:#fff;border:none;border-radius:6px;
+          padding:8px 22px;cursor:pointer;font-size:.95em}
+        .hc-cancel{background:transparent;color:#555;border:1px solid #ccc;
+          border-radius:6px;padding:8px 22px;cursor:pointer;font-size:.95em}
+      </style>
+      <div class="hc-overlay" id="hc-overlay">
+        <div class="hc-box">
+          <div class="hc-title">${title}</div>
+
+          <div class="hc-row">
+            <label>שם האירוע *</label>
+            <input id="hc-name" type="text" placeholder="לדוגמה: יום הולדת יוסי"
+              value="${ev ? ev.event_name : ''}">
+          </div>
+
+          <div class="hc-row">
+            <label>סוג האירוע *</label>
+            <select id="hc-type">${typeOptions}</select>
+          </div>
+
+          <div class="hc-half">
+            <div class="hc-row">
+              <label>יום *</label>
+              <input id="hc-day" type="number" min="1" max="30" placeholder="1-30"
+                value="${ev ? ev.hebrew_day : ''}">
+            </div>
+            <div class="hc-row">
+              <label>חודש *</label>
+              <select id="hc-month">${monthOptions}</select>
+            </div>
+          </div>
+
+          <div class="hc-check">
+            <input id="hc-recurring" type="checkbox" ${!ev || ev.is_recurring !== false ? 'checked' : ''}>
+            <label for="hc-recurring">אירוע חוזר מדי שנה</label>
+          </div>
+
+          <div class="hc-row">
+            <label>שנה עברית (לאירועים חד-פעמיים)</label>
+            <input id="hc-year" type="number" min="5700" max="6000"
+              placeholder="לדוגמה: 5785" value="${ev && ev.hebrew_year ? ev.hebrew_year : ''}">
+          </div>
+
+          <div class="hc-row">
+            <label>תזכורות</label>
+            <div class="hc-rem-row">
+              <div class="hc-row">
+                <input id="hc-reminder-input" type="number" min="0" max="365"
+                  placeholder="ימים לפני האירוע">
+              </div>
+              <button class="hc-add-btn" id="hc-add-rem">הוסף</button>
+            </div>
+            <div id="hc-reminders-list">${this._remindersHTML()}</div>
+          </div>
+
+          <div id="hc-error"></div>
+
+          <div class="hc-actions">
+            <button class="hc-cancel" id="hc-cancel">ביטול</button>
+            <button class="hc-save" id="hc-save">שמור</button>
+          </div>
+        </div>
+      </div>`;
+
+    // סגירה בלחיצה על overlay
+    this.querySelector('#hc-overlay').onclick = (e) => {
+      if (e.target.id === 'hc-overlay') this.close();
+    };
+    this.querySelector('#hc-cancel').onclick = () => this.close();
+    this.querySelector('#hc-save').onclick = () => this._save();
+    this.querySelector('#hc-add-rem').onclick = () => this._addReminder();
+    this.querySelector('#hc-reminder-input').onkeypress = (e) => {
+      if (e.key === 'Enter') this._addReminder();
+    };
+    this._bindReminderRemove();
+
+    // מילוי שדות עריכה
+    if (ev) {
+      this.querySelector('#hc-type').value = ev.event_type;
+      this.querySelector('#hc-month').value = ev.hebrew_month;
+    }
+
+    // פוקוס
+    setTimeout(() => this.querySelector('#hc-name')?.focus(), 50);
+  }
+}
+
+customElements.define('hebrew-calendar-dialog', HebrewCalendarDialog);
+
+
+/* ============================================================
+   HebrewCalendarCard — הכרטיס הראשי (רשימת אירועים בלבד)
+   ============================================================ */
 class HebrewCalendarCard extends HTMLElement {
-  
+
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
     this._hass = null;
     this._config = null;
     this._events = [];
-    this._editingEvent = null; // null = טופס הוספה, object = עריכה
-    this._showForm = false;
-    this._currentReminders = []; // תזכורות בטופס הפעיל
   }
 
-  /**
-   * הגדרת קונפיגורציה של הכרטיס מ-YAML.
-   * @param {Object} config - קונפיגורציה מ-Lovelace
-   */
   setConfig(config) {
-    if (!config.entity) {
-      throw new Error('חובה להגדיר entity (sensor.hebrew_calendar_events)');
-    }
+    if (!config.entity) throw new Error('חובה להגדיר entity');
     this._config = config;
     this.render();
   }
 
-  /**
-   * קבלת hass object ועדכון המצב.
-   * נקרא בכל פעם שמשהו ב-HA משתנה.
-   */
   set hass(hass) {
     this._hass = hass;
-    
-    // קבלת נתוני האירועים מה-sensor
     const stateObj = hass.states[this._config.entity];
-    if (stateObj && stateObj.attributes.events) {
+    if (stateObj?.attributes?.events) {
       this._events = stateObj.attributes.events;
     }
-    if (this._showForm) return;  // ← לא לרנדר מחדש כשהכרטיס פתוח
     this.render();
   }
 
-  /**
-   * ערך הגובה הרצוי של הכרטיס.
-   * @returns {number} - גובה ב-units
-   */
   getCardSize() {
-    return Math.max(3, Math.ceil(this._events.length / 2) + 2);
+    return Math.max(3, this._events.length + 2);
   }
 
-  /**
-   * קריאה לשירות HA.
-   * @param {string} service - שם השירות
-   * @param {Object} data - נתונים לשירות
-   */
-  async _callService(service, data) {
-    await this._hass.callService(DOMAIN, service, data);
+  /** פתיחת דיאלוג הוספה/עריכה */
+  _openDialog(editingEvent) {
+    const dialog = document.createElement('hebrew-calendar-dialog');
+    dialog.open(this._hass, editingEvent || null, () => {});
   }
 
-  /**
-   * פתיחת טופס הוספת אירוע חדש.
-   */
-  _openAddForm() {
-    this._editingEvent = null;
-    this._showForm = true;
-    this._currentReminders = [];
-    this.render();
-    this._focusFirstInput();
+  /** מחיקת אירוע */
+  async _deleteEvent(id, name) {
+    if (!confirm(`האם למחוק את "${name}"?`)) return;
+    await this._hass.callService(DOMAIN, 'remove_event', { event_id: id });
   }
 
-  /**
-   * פתיחת טופס עריכת אירוע קיים.
-   * @param {Object} event - נתוני האירוע לעריכה
-   */
-  _openEditForm(event) {
-    this._editingEvent = event;
-    this._showForm = true;
-    this._currentReminders = [...(event.reminders || [])];
-    this.render();
-    this._prefillForm(event);
-  }
+  render() {
+    const title = this._config?.title || 'לוח שנה עברי';
+    const stateObj = this._hass?.states[this._config?.entity];
+    const currentDate = stateObj?.attributes?.current_hebrew_date || '';
 
-  /**
-   * סגירת הטופס וחזרה לתצוגה הראשית.
-   */
-  _closeForm() {
-    this._showForm = false;
-    this._editingEvent = null;
-    this._currentReminders = [];
-    this.render();
-  }
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host{direction:rtl}
+        ha-card{padding:16px}
+        .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+        .title{font-size:1.15em;font-weight:bold;color:var(--primary-text-color)}
+        .sub{font-size:.78em;color:var(--secondary-text-color);margin-top:2px}
+        .add-btn{background:var(--primary-color);color:#fff;border:none;border-radius:50%;
+          width:36px;height:36px;font-size:20px;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .list{display:flex;flex-direction:column;gap:8px}
+        .card{background:var(--card-background-color);border:1px solid var(--divider-color);
+          border-radius:8px;padding:11px;display:flex;justify-content:space-between;align-items:flex-start}
+        .name{font-weight:bold;color:var(--primary-text-color)}
+        .type{font-size:.8em;color:var(--secondary-text-color);margin-top:2px}
+        .date{font-size:.82em;color:var(--primary-color);margin-top:3px}
+        .until{font-size:.78em;color:green;margin-top:2px}
+        .rems{font-size:.75em;color:var(--secondary-text-color);margin-top:3px}
+        .badge{display:inline-block;border-radius:12px;padding:1px 8px;
+          font-size:.72em;margin-top:4px;color:#fff}
+        .recurring{background:#2196f3}.once{background:#ff9800}
+        .actions{display:flex;gap:4px;flex-shrink:0}
+        .ibtn{background:none;border:none;cursor:pointer;padding:4px;
+          border-radius:4px;font-size:15px;color:var(--secondary-text-color)}
+        .ibtn:hover{background:var(--secondary-background-color)}
+        .del:hover{color:var(--error-color)}
+        .empty{text-align:center;color:var(--secondary-text-color);padding:24px}
+        .empty .icon{font-size:2em;margin-bottom:8px}
+      </style>
+      <ha-card>
+        <div class="header">
+          <div>
+            <div class="title">📅 ${title}</div>
+            ${currentDate ? `<div class="sub">${currentDate}</div>` : ''}
+          </div>
+          <button class="add-btn" id="add-btn" title="הוסף אירוע">+</button>
+        </div>
+        <div class="list">${this._eventsHTML()}</div>
+      </ha-card>`;
 
-  /**
-   * מילוי הטופס בנתוני אירוע קיים (לעריכה).
-   * @param {Object} event - נתוני האירוע
-   */
-  _prefillForm(event) {
-    setTimeout(() => {
-      const root = this.shadowRoot;
-      if (!root) return;
-      
-      const setValue = (id, value) => {
-        const el = root.getElementById(id);
-        if (el && value !== undefined && value !== null) el.value = value;
+    this.shadowRoot.getElementById('add-btn').onclick = () => this._openDialog(null);
+
+    this.shadowRoot.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.onclick = () => {
+        try { this._openDialog(JSON.parse(btn.dataset.edit)); } catch(e) {}
       };
-      
-      setValue('event-name', event.event_name);
-      setValue('event-type', event.event_type);
-      setValue('hebrew-day', event.hebrew_day);
-      setValue('hebrew-month', event.hebrew_month);
-      setValue('hebrew-year', event.hebrew_year || '');
-      
-      const recurringEl = root.getElementById('is-recurring');
-      if (recurringEl) recurringEl.checked = event.is_recurring !== false;
-    }, 50);
+    });
+
+    this.shadowRoot.querySelectorAll('[data-del]').forEach(btn => {
+      btn.onclick = () => this._deleteEvent(btn.dataset.del, btn.dataset.name);
+    });
   }
 
-  /**
-   * שמירת אירוע (הוספה או עריכה).
-   * אוסף את כל הנתונים מהטופס וקורא לשירות המתאים.
-   */
-  async _saveEvent() {
-    const root = this.shadowRoot;
-    
-    const getValue = (id) => root.getElementById(id)?.value;
-    const getChecked = (id) => root.getElementById(id)?.checked;
-    
-    const name = getValue('event-name');
-    const type = getValue('event-type');
-    const day = parseInt(getValue('hebrew-day'));
-    const month = parseInt(getValue('hebrew-month'));
-    const yearVal = getValue('hebrew-year');
-    const year = yearVal ? parseInt(yearVal) : null;
-    const isRecurring = getChecked('is-recurring') !== false;
-    
-    // ולידציה בסיסית
-    if (!name || !type || !day || !month) {
-      this._showError('יש למלא את כל השדות החובה');
-      return;
-    }
-    
-    const data = {
-      event_name: name,
-      event_type: type,
-      hebrew_day: day,
-      hebrew_month: month,
-      is_recurring: isRecurring,
-      reminders: this._currentReminders,
-    };
-    
-    if (year) data.hebrew_year = year;
-    if (!isRecurring && !year) {
-      this._showError('אירוע חד-פעמי חייב שנה עברית');
-      return;
-    }
-    
-    try {
-      if (this._editingEvent) {
-        await this._callService('edit_event', {
-          event_id: this._editingEvent.id,
-          ...data,
-        });
-      } else {
-        await this._callService('add_event', data);
-      }
-      this._closeForm();
-    } catch (e) {
-      this._showError('שגיאה בשמירת האירוע: ' + e.message);
-    }
-  }
+  _eventsHTML() {
+    if (!this._events.length) return `
+      <div class="empty">
+        <div class="icon">📅</div>
+        <div>אין אירועים עדיין</div>
+        <div style="font-size:.82em;margin-top:4px">לחץ על + להוספה</div>
+      </div>`;
 
-  /**
-   * מחיקת אירוע לאחר אישור.
-   * @param {string} eventId - מזהה האירוע
-   * @param {string} eventName - שם האירוע (לאישור)
-   */
-  async _deleteEvent(eventId, eventName) {
-    if (!confirm(`האם למחוק את "${eventName}"?`)) return;
-    
-    try {
-      await this._callService('remove_event', { event_id: eventId });
-    } catch (e) {
-      this._showError('שגיאה במחיקת האירוע');
-    }
-  }
+    return this._events.map(ev => {
+      const rems = (ev.reminders||[]).filter(d=>d>0)
+        .map(d=>d+' ימים לפני').join(' | ');
+      const du = ev.days_until;
+      const until = du===0?'🎉 היום!':du===1?'מחר':du>0&&du<=30?`בעוד ${du} ימים`:'';
+      const safeEv = JSON.stringify(ev).replace(/"/g,'&quot;');
 
-  /**
-   * הוספת תזכורת לרשימת התזכורות בטופס.
-   */
-  _addReminder() {
-    const root = this.shadowRoot;
-    const input = root.getElementById('reminder-input');
-    const days = parseInt(input?.value);
-    
-    if (isNaN(days) || days < 0) {
-      this._showError('יש להזין מספר ימים תקין');
-      return;
-    }
-    
-    if (this._currentReminders.includes(days)) {
-      this._showError('תזכורת זו כבר קיימת');
-      return;
-    }
-    
-    this._currentReminders = [...this._currentReminders, days].sort((a, b) => a - b);
-    if (input) input.value = '';
-    this._updateRemindersList();
-  }
-
-  /**
-   * הסרת תזכורת מהרשימה בטופס.
-   * @param {number} days - מספר הימים של התזכורת
-   */
-  _removeReminder(days) {
-    this._currentReminders = this._currentReminders.filter(d => d !== days);
-    this._updateRemindersList();
-  }
-
-  /**
-   * עדכון תצוגת רשימת התזכורות בטופס (ללא re-render מלא).
-   */
-  _updateRemindersList() {
-    const container = this.shadowRoot.getElementById('reminders-list');
-    if (container) {
-      container.innerHTML = this._renderRemindersList();
-      this._attachReminderListeners();
-    }
-  }
-
-  /**
-   * הצגת הודעת שגיאה זמנית.
-   * @param {string} message - הודעת השגיאה
-   */
-  _showError(message) {
-    const errorEl = this.shadowRoot.getElementById('form-error');
-    if (errorEl) {
-      errorEl.textContent = message;
-      errorEl.style.display = 'block';
-      setTimeout(() => { errorEl.style.display = 'none'; }, 3000);
-    }
-  }
-
-  /**
-   * פוקוס על השדה הראשון בטופס.
-   */
-  _focusFirstInput() {
-    setTimeout(() => {
-      const input = this.shadowRoot.getElementById('event-name');
-      if (input) input.focus();
-    }, 100);
-  }
-
-  // ============================================================
-  // ייצור HTML
-  // ============================================================
-
-  /**
-   * ייצור CSS סגנון הכרטיס.
-   * @returns {string} CSS
-   */
-  _getStyles() {
-    return `
-      :host {
-        direction: rtl;
-        font-family: var(--paper-font-body1_-_font-family);
-      }
-      ha-card {
-        padding: 16px;
-      }
-      .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
-      }
-      .card-title {
-        font-size: 1.2em;
-        font-weight: bold;
-        color: var(--primary-text-color);
-      }
-      .add-btn {
-        background: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 36px;
-        height: 36px;
-        font-size: 20px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .event-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-      .event-card {
-        background: var(--card-background-color);
-        border: 1px solid var(--divider-color);
-        border-radius: 8px;
-        padding: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-      }
-      .event-info {
-        flex: 1;
-      }
-      .event-name {
-        font-weight: bold;
-        font-size: 1em;
-        color: var(--primary-text-color);
-      }
-      .event-type {
-        font-size: 0.8em;
-        color: var(--secondary-text-color);
-        margin-top: 2px;
-      }
-      .event-date {
-        font-size: 0.85em;
-        color: var(--primary-color);
-        margin-top: 4px;
-      }
-      .event-days-until {
-        font-size: 0.8em;
-        color: var(--success-color, green);
-        margin-top: 2px;
-      }
-      .event-reminders {
-        font-size: 0.75em;
-        color: var(--secondary-text-color);
-        margin-top: 4px;
-      }
-      .event-actions {
-        display: flex;
-        gap: 4px;
-      }
-      .icon-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 4px;
-        font-size: 16px;
-        color: var(--secondary-text-color);
-      }
-      .icon-btn:hover { background: var(--secondary-background-color); }
-      .icon-btn.delete:hover { color: var(--error-color); }
-      .badge {
-        display: inline-block;
-        background: var(--primary-color);
-        color: white;
-        border-radius: 12px;
-        padding: 1px 8px;
-        font-size: 0.75em;
-        margin-top: 4px;
-      }
-      .badge.recurring { background: var(--info-color, #2196f3); }
-      .badge.once { background: var(--warning-color, #ff9800); }
-      /* ======= טופס ======= */
-      .form-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.5);
-        z-index: 1000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-      }
-      .form-container {
-        background: var(--card-background-color);
-        border-radius: 12px;
-        padding: 20px;
-        width: 100%;
-        max-width: 480px;
-        max-height: 90vh;
-        overflow-y: auto;
-        direction: rtl;
-      }
-      .form-title {
-        font-size: 1.1em;
-        font-weight: bold;
-        margin-bottom: 16px;
-        color: var(--primary-text-color);
-      }
-      .form-row {
-        margin-bottom: 14px;
-      }
-      .form-row label {
-        display: block;
-        font-size: 0.85em;
-        color: var(--secondary-text-color);
-        margin-bottom: 4px;
-      }
-      .form-row input, .form-row select {
-        width: 100%;
-        padding: 8px 10px;
-        border: 1px solid var(--divider-color);
-        border-radius: 6px;
-        font-size: 0.95em;
-        background: var(--card-background-color);
-        color: var(--primary-text-color);
-        box-sizing: border-box;
-        direction: rtl;
-      }
-      .form-row input:focus, .form-row select:focus {
-        outline: none;
-        border-color: var(--primary-color);
-      }
-      .checkbox-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .checkbox-row input { width: auto; }
-      .reminder-input-row {
-        display: flex;
-        gap: 8px;
-        align-items: flex-end;
-      }
-      .reminder-input-row .form-row { flex: 1; margin: 0; }
-      .reminder-add-btn {
-        background: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: 6px;
-        padding: 8px 14px;
-        cursor: pointer;
-        white-space: nowrap;
-      }
-      .reminders-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 8px;
-        min-height: 28px;
-      }
-      .reminder-tag {
-        background: var(--secondary-background-color);
-        border-radius: 16px;
-        padding: 3px 10px 3px 6px;
-        font-size: 0.85em;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-      .reminder-tag button {
-        background: none;
-        border: none;
-        cursor: pointer;
-        color: var(--secondary-text-color);
-        font-size: 14px;
-        padding: 0;
-        line-height: 1;
-      }
-      .form-actions {
-        display: flex;
-        gap: 8px;
-        justify-content: flex-end;
-        margin-top: 20px;
-      }
-      .btn-save {
-        background: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: 6px;
-        padding: 8px 20px;
-        cursor: pointer;
-        font-size: 0.95em;
-      }
-      .btn-cancel {
-        background: transparent;
-        color: var(--secondary-text-color);
-        border: 1px solid var(--divider-color);
-        border-radius: 6px;
-        padding: 8px 20px;
-        cursor: pointer;
-        font-size: 0.95em;
-      }
-      .error-msg {
-        color: var(--error-color);
-        font-size: 0.85em;
-        padding: 6px;
-        background: rgba(255,0,0,0.1);
-        border-radius: 4px;
-        margin-top: 8px;
-        display: none;
-      }
-      .empty-state {
-        text-align: center;
-        color: var(--secondary-text-color);
-        padding: 24px;
-      }
-      .empty-state .icon { font-size: 2em; margin-bottom: 8px; }
-    `;
-  }
-
-  /**
-   * ייצור HTML של רשימת תזכורות בטופס.
-   * @returns {string} HTML
-   */
-  _renderRemindersList() {
-    if (this._currentReminders.length === 0) {
-      return '<span style="color:var(--secondary-text-color);font-size:0.8em">אין תזכורות</span>';
-    }
-    return this._currentReminders.map(d =>
-      `<span class="reminder-tag">
-        ${d === 0 ? 'ביום האירוע' : `${d} ימים לפני`}
-        <button data-remove="${d}" title="הסר">✕</button>
-      </span>`
-    ).join('');
-  }
-
-  /**
-   * ייצור HTML של כרטיסי האירועים.
-   * @returns {string} HTML
-   */
-  _renderEventList() {
-    if (this._events.length === 0) {
       return `
-        <div class="empty-state">
-          <div class="icon">📅</div>
-          <div>אין אירועים עדיין</div>
-          <div style="font-size:0.85em;margin-top:4px">לחץ על + להוספת אירוע ראשון</div>
-        </div>`;
-    }
-
-    return this._events.map(event => {
-      const remindersText = event.reminders && event.reminders.length > 0
-        ? '🔔 ' + event.reminders.map(d => d === 0 ? 'ביום האירוע' : `${d} ימים לפני`).join(' | ')
-        : '';
-      
-      const daysUntil = event.days_until;
-      let daysText = '';
-      if (daysUntil === 0) daysText = '🎉 היום!';
-      else if (daysUntil === 1) daysText = 'מחר';
-      else if (daysUntil > 0 && daysUntil <= 30) daysText = `בעוד ${daysUntil} ימים`;
-      
-      return `
-        <div class="event-card">
-          <div class="event-info">
-            <div class="event-name">${event.event_name}</div>
-            <div class="event-type">${event.event_type}</div>
-            <div class="event-date">📅 ${event.hebrew_date_string || ''}</div>
-            ${daysText ? `<div class="event-days-until">${daysText}</div>` : ''}
-            ${remindersText ? `<div class="event-reminders">${remindersText}</div>` : ''}
-            <span class="badge ${event.is_recurring ? 'recurring' : 'once'}">
-              ${event.is_recurring ? '↻ חוזר' : '· חד-פעמי'}
+        <div class="card">
+          <div>
+            <div class="name">${ev.event_name}</div>
+            <div class="type">${ev.event_type}</div>
+            <div class="date">📅 ${ev.hebrew_date_string||''}</div>
+            ${until?`<div class="until">${until}</div>`:''}
+            ${rems?`<div class="rems">🔔 ${rems}</div>`:''}
+            <span class="badge ${ev.is_recurring?'recurring':'once'}">
+              ${ev.is_recurring?'↻ חוזר':'· חד-פעמי'}
             </span>
           </div>
-          <div class="event-actions">
-            <button class="icon-btn" data-edit='${JSON.stringify(event).replace(/'/g, "&#39;")}' title="ערוך">✏️</button>
-            <button class="icon-btn delete" data-delete="${event.id}" data-name="${event.event_name}" title="מחק">🗑️</button>
+          <div class="actions">
+            <button class="ibtn" data-edit="${safeEv}" title="ערוך">✏️</button>
+            <button class="ibtn del" data-del="${ev.id}" data-name="${ev.event_name}" title="מחק">🗑️</button>
           </div>
         </div>`;
     }).join('');
   }
-
-  /**
-   * ייצור HTML של הטופס (הוספה/עריכה).
-   * @returns {string} HTML
-   */
-  _renderForm() {
-    const isEdit = !!this._editingEvent;
-    const title = isEdit ? `עריכת: ${this._editingEvent.event_name}` : 'הוספת אירוע חדש';
-    
-    const monthOptions = Object.entries(HEBREW_MONTHS)
-      .map(([num, name]) => `<option value="${num}">${name}</option>`)
-      .join('');
-    
-    const typeOptions = EVENT_TYPES
-      .map(t => `<option value="${t}">${t}</option>`)
-      .join('');
-    
-    return `
-      <div class="form-overlay" id="form-overlay">
-        <div class="form-container">
-          <div class="form-title">${title}</div>
-          
-          <div class="form-row">
-            <label>שם האירוע *</label>
-            <input id="event-name" type="text" placeholder="לדוגמה: יום הולדת יוסי" />
-          </div>
-          
-          <div class="form-row">
-            <label>סוג האירוע *</label>
-            <select id="event-type">${typeOptions}</select>
-          </div>
-          
-          <div style="display:flex;gap:8px">
-            <div class="form-row" style="flex:1">
-              <label>יום *</label>
-              <input id="hebrew-day" type="number" min="1" max="30" placeholder="1-30" />
-            </div>
-            <div class="form-row" style="flex:2">
-              <label>חודש *</label>
-              <select id="hebrew-month">${monthOptions}</select>
-            </div>
-          </div>
-          
-          <div class="form-row">
-            <div class="checkbox-row">
-              <input id="is-recurring" type="checkbox" checked />
-              <label for="is-recurring" style="display:inline">אירוע חוזר מדי שנה</label>
-            </div>
-          </div>
-          
-          <div class="form-row">
-            <label>שנה עברית (לאירועים חד-פעמיים)</label>
-            <input id="hebrew-year" type="number" min="5700" max="6000" placeholder="לדוגמה: 5784" />
-          </div>
-          
-          <div class="form-row">
-            <label>תזכורות</label>
-            <div class="reminder-input-row">
-              <div class="form-row">
-                <input id="reminder-input" type="number" min="0" max="365" placeholder="ימים לפני האירוע" />
-              </div>
-              <button class="reminder-add-btn" id="add-reminder-btn">הוסף</button>
-            </div>
-            <div class="reminders-list" id="reminders-list">
-              ${this._renderRemindersList()}
-            </div>
-          </div>
-          
-          <div class="error-msg" id="form-error"></div>
-          
-          <div class="form-actions">
-            <button class="btn-cancel" id="cancel-btn">ביטול</button>
-            <button class="btn-save" id="save-btn">שמור</button>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  /**
-   * רינדור מלא של הכרטיס.
-   * מייצר את כל ה-HTML ומצרף event listeners.
-   */
-  render() {
-    const title = this._config?.title || 'לוח שנה עברי';
-    const currentDate = this._hass?.states[this._config?.entity]?.attributes?.current_hebrew_date || '';
-    
-    this.shadowRoot.innerHTML = `
-      <style>${this._getStyles()}</style>
-      <ha-card>
-        <div class="card-header">
-          <div>
-            <div class="card-title">📅 ${title}</div>
-            ${currentDate ? `<div style="font-size:0.8em;color:var(--secondary-text-color)">${currentDate}</div>` : ''}
-          </div>
-          <button class="add-btn" id="add-btn" title="הוסף אירוע">+</button>
-        </div>
-        <div class="event-list">
-          ${this._renderEventList()}
-        </div>
-        ${this._showForm ? this._renderForm() : ''}
-      </ha-card>`;
-    
-    this._attachEventListeners();
-  }
-
-  /**
-   * צירוף כל event listeners לאחר render.
-   */
-  _attachEventListeners() {
-    const root = this.shadowRoot;
-    
-    // כפתור הוספה
-    root.getElementById('add-btn')?.addEventListener('click', () => this._openAddForm());
-    
-    // כפתורי עריכה
-    root.querySelectorAll('[data-edit]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        try {
-          const event = JSON.parse(btn.getAttribute('data-edit'));
-          this._openEditForm(event);
-        } catch(e) { console.error('Parse error', e); }
-      });
-    });
-    
-    // כפתורי מחיקה
-    root.querySelectorAll('[data-delete]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this._deleteEvent(btn.getAttribute('data-delete'), btn.getAttribute('data-name'));
-      });
-    });
-    
-    // כפתורי טופס
-    root.getElementById('save-btn')?.addEventListener('click', () => this._saveEvent());
-    root.getElementById('cancel-btn')?.addEventListener('click', () => this._closeForm());
-    
-    // סגירה בלחיצה על ה-overlay
-    root.getElementById('form-overlay')?.addEventListener('click', (e) => {
-      if (e.target.id === 'form-overlay') this._closeForm();
-    });
-    
-    // כפתור הוספת תזכורת
-    root.getElementById('add-reminder-btn')?.addEventListener('click', () => this._addReminder());
-    
-    // Enter בשדה תזכורת
-    root.getElementById('reminder-input')?.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') this._addReminder();
-    });
-    
-    // כפתורי הסרת תזכורות
-    this._attachReminderListeners();
-  }
-
-  /**
-   * צירוף listeners לכפתורי הסרת תזכורות.
-   */
-  _attachReminderListeners() {
-    this.shadowRoot.querySelectorAll('[data-remove]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this._removeReminder(parseInt(btn.getAttribute('data-remove')));
-      });
-    });
-  }
 }
 
-// רישום הכרטיס ב-Custom Elements
 customElements.define('hebrew-calendar-card', HebrewCalendarCard);
 
-// מידע עבור Lovelace card picker
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'hebrew-calendar-card',
   name: 'Hebrew Calendar Card',
   description: 'כרטיס לניהול אירועים בלוח שנה עברי',
-  preview: false,
 });
 
-console.info(
-  '%c HEBREW-CALENDAR-CARD %c v1.0.0 ',
-  'color: white; background: #3b5998; font-weight: bold;',
-  'color: #3b5998; background: white; font-weight: bold;'
-);
+console.info('%c HEBREW-CALENDAR-CARD %c v1.1.0 ',
+  'color:white;background:#3b5998;font-weight:bold',
+  'color:#3b5998;background:white;font-weight:bold');
