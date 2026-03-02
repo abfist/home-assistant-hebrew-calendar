@@ -65,7 +65,7 @@ class HebrewCalendarCard extends HTMLElement {
     if (stateObj && stateObj.attributes.events) {
       this._events = stateObj.attributes.events;
     }
-    
+    if (this._showForm) return;  // ← לא לרנדר מחדש כשהכרטיס פתוח
     this.render();
   }
 
