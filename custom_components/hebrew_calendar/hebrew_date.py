@@ -10,6 +10,7 @@ Hebrew Date Converter
 import logging
 from datetime import date
 from typing import Dict, Optional
+from pyluach.dates import HebrewDate, GregorianDate
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,22 +25,23 @@ class HebrewDateConverter:
     - hebrew_date_to_string: המרת תאריך עברי למחרוזת קריאה
     """
 
-    def __init__(self):
-        """אתחול הממיר ובדיקת זמינות ספריית pyluach."""
-        self._pyluach_available = self._check_pyluach()
+    # def __init__(self):
+    #     """אתחול הממיר ובדיקת זמינות ספריית pyluach."""
+    #     _LOGGER.info("initialized ")
+        # self._pyluach_available = self._check_pyluach()
 
-    def _check_pyluach(self) -> bool:
-        """בדיקה אם ספריית pyluach זמינה."""
-        try:
-            import pyluach  # noqa: F401
-            _LOGGER.info("pyluach library found - using accurate Hebrew date conversion")
-            return True
-        except ImportError:
-            _LOGGER.warning(
-                "pyluach library not found. Install it for accurate Hebrew date conversion: "
-                "pip install pyluach"
-            )
-            return False
+    # def _check_pyluach(self) -> bool:
+    #     """בדיקה אם ספריית pyluach זמינה."""
+    #     try:
+    #         import pyluach  # noqa: F401
+    #         _LOGGER.info("pyluach library found - using accurate Hebrew date conversion")
+    #         return True
+    #     except ImportError:
+    #         _LOGGER.warning(
+    #             "pyluach library not found. Install it for accurate Hebrew date conversion: "
+    #             "pip install pyluach"
+    #         )
+    #         return False
 
     def gregorian_to_hebrew(self, gregorian_date: date) -> Dict[str, int]:
         """
@@ -51,6 +53,7 @@ class HebrewDateConverter:
         Returns:
             dict עם מפתחות: day, month, year
         """
+        return self._pyluach_gregorian_to_hebrew(gregorian_date)
         if self._pyluach_available:
             return self._pyluach_gregorian_to_hebrew(gregorian_date)
         else:
@@ -61,13 +64,14 @@ class HebrewDateConverter:
         המרת תאריך עברי לתאריך גרגוריאני.
         
         Args:
-            day: יום בחודש העברי (1-30)
+            day: יום בחודש העברי (1-31)
             month: חודש עברי (1-13)
             year: שנה עברית
             
         Returns:
             תאריך גרגוריאני מקביל
         """
+        return self._pyluach_hebrew_to_gregorian(day, month, year)
         if self._pyluach_available:
             return self._pyluach_hebrew_to_gregorian(day, month, year)
         else:
@@ -109,7 +113,7 @@ class HebrewDateConverter:
     def _pyluach_gregorian_to_hebrew(self, gregorian_date: date) -> Dict[str, int]:
         """המרה מגרגוריאני לעברי באמצעות pyluach."""
         try:
-            from pyluach.dates import HebrewDate, GregorianDate
+            # from pyluach.dates import HebrewDate, GregorianDate
             g = GregorianDate(gregorian_date.year, gregorian_date.month, gregorian_date.day)
             h = g.to_heb()
             return {"day": h.day, "month": h.month, "year": h.year}
@@ -120,7 +124,7 @@ class HebrewDateConverter:
     def _pyluach_hebrew_to_gregorian(self, day: int, month: int, year: int) -> date:
         """המרה מעברי לגרגוריאני באמצעות pyluach."""
         try:
-            from pyluach.dates import HebrewDate
+            # from pyluach.dates import HebrewDate
             h = HebrewDate(year, month, day)
             g = h.to_greg()
             return date(g.year, g.month, g.day)
