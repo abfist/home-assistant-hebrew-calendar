@@ -10,8 +10,11 @@ Hebrew Calendar Sensor Platform
 """
 
 import logging
+import copy
+from Event import Event
 from datetime import date, timedelta
 from typing import Any, Dict, List, Optional
+from HebrewDateConverter import HebrewDateConverter
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -29,7 +32,7 @@ from .const import (
     ATTR_REMINDERS,
 )
 from .storage import HebrewCalendarStorage
-from .hebrew_date import HebrewDateConverter
+# from .hebrew_date import HebrewDateConverter
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,12 +47,13 @@ async def async_setup_entry(
     יוצר שלושה sensors: כל האירועים, היום, קרובים.
     """
     storage: HebrewCalendarStorage = hass.data[DOMAIN][entry.entry_id]["storage"]
-    converter: HebrewDateConverter = hass.data[DOMAIN][entry.entry_id]["converter"]
+    # converter: HebrewDateConverter = hass.data[DOMAIN][entry.entry_id]["converter"]
 
     entities = [
-        HebrewCalendarAllEventsSensor(hass, entry, storage, converter),
-        HebrewCalendarTodaySensor(hass, entry, storage, converter),
-        HebrewCalendarUpcomingSensor(hass, entry, storage, converter),
+        HebrewCalendarAllEventsSensor(hass, entry, storage),
+        HebrewCalendarTodaySensor(hass, entry, storage),
+        HebrewCalendarUpcomingSensor(hass, entry, storage),
+        HebrewCalendarTodayReminders(hass, entry, storage),
     ]
 
     async_add_entities(entities, True)
@@ -75,44 +79,17 @@ class HebrewCalendarBaseSensor(SensorEntity):
         hass: HomeAssistant,
         entry: ConfigEntry,
         storage: HebrewCalendarStorage,
-        converter: HebrewDateConverter,
     ) -> None:
-        """אתחול הסensor."""
+        """אתחול הסנסור."""
         self._hass = hass
         self._entry = entry
         self._storage = storage
-        self._converter = converter
-        self._events: List[Dict[str, Any]] = []
-
-    def _get_event_gregorian_date(self, event: Dict[str, Any], year: Optional[int] = None) -> Optional[date]:
-        """
-        קבלת התאריך הגרגוריאני של אירוע.
-        
-        Args:
-            event: נתוני האירוע
-            year: שנה עברית לחיפוש (ברירת מחדל: השנה הנוכחית)
-            
-        Returns:
-            תאריך גרגוריאני, או None אם לא ניתן להמיר
-        """
-        try:
-            if year is None:
-                today_hebrew = self._converter.gregorian_to_hebrew(date.today())
-                year = today_hebrew["year"]
-            
-            return self._converter.hebrew_to_gregorian(
-                event[ATTR_HEBREW_DAY],
-                event[ATTR_HEBREW_MONTH],
-                year,
-            )
-        except Exception as e:
-            _LOGGER.debug("Could not get gregorian date for event %s: %s", event.get("id"), e)
-            return None
+        self._events: List[Event] = []
 
 
 class HebrewCalendarAllEventsSensor(HebrewCalendarBaseSensor):
     """
-    Sensor שמציג את כל האירועים.
+    סנסור שמציג את כל האירועים.
     מספק את כל הנתונים ל-Lovelace card.
     """
 
@@ -125,7 +102,7 @@ class HebrewCalendarAllEventsSensor(HebrewCalendarBaseSensor):
         self._attr_name = "Hebrew Calendar Events"
 
     async def async_update(self) -> None:
-        """עדכון נתוני הsensor."""
+        """עדכון נתוני הסנסור."""
         self._events = self._storage.get_events_sync()
 
     @property
@@ -134,45 +111,26 @@ class HebrewCalendarAllEventsSensor(HebrewCalendarBaseSensor):
         return len(self._events)
 
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> Event:
         """
         כל פרטי האירועים כ-attributes.
         משמש את ה-Lovelace card וה-automations.
         """
-        today_hebrew = self._converter.gregorian_to_hebrew(date.today())
-        
-        enriched_events = []
-        for event in self._events:
-            year = today_hebrew["year"] if event.get(ATTR_IS_RECURRING) else event.get(ATTR_HEBREW_YEAR)
-            gregorian = self._get_event_gregorian_date(event, year)
-            
-            enriched = {
-                **event,
-                "hebrew_date_string": self._converter.hebrew_date_to_string(
-                    event[ATTR_HEBREW_DAY],
-                    event[ATTR_HEBREW_MONTH],
-                    year,
-                ),
-                "gregorian_date": str(gregorian) if gregorian else None,
-                "days_until": (gregorian - date.today()).days if gregorian else None,
-            }
-            enriched_events.append(enriched)
+        enriched_events =copy.deepcopy(self._events)
         
         # מיון לפי מספר ימים עד האירוע
         enriched_events.sort(key=lambda e: (e["days_until"] is None, e.get("days_until", 9999)))
         
         return {
             "events": enriched_events,
-            "total_count": len(self._events),
-            "current_hebrew_date": self._converter.hebrew_date_to_string(
-                today_hebrew["day"], today_hebrew["month"], today_hebrew["year"]
-            ),
+            "total_count": len(enriched_events),
+            "current_hebrew_date": HebrewDateConverter.getCurrentHebrewDate(),
         }
 
 
 class HebrewCalendarTodaySensor(HebrewCalendarBaseSensor):
     """
-    Sensor שמציג אירועים שמתרחשים היום.
+    סנסור שמציג אירועים שמתרחשים היום.
     """
 
     _attr_icon = "mdi:calendar-today"
@@ -182,23 +140,17 @@ class HebrewCalendarTodaySensor(HebrewCalendarBaseSensor):
         super().__init__(*args, **kwargs)
         self._attr_unique_id = f"{self._entry.entry_id}_today"
         self._attr_name = "Hebrew Calendar Today"
-        self._today_events: List[Dict[str, Any]] = []
+        self._today_events: List[Event] = []
 
     async def async_update(self) -> None:
         """עדכון: מחפש אירועים שמתרחשים היום."""
         all_events = self._storage.get_events_sync()
-        today = date.today()
-        today_hebrew = self._converter.gregorian_to_hebrew(today)
-        
+
         self._today_events = []
         for event in all_events:
-            year = today_hebrew["year"] if event.get(ATTR_IS_RECURRING) else event.get(ATTR_HEBREW_YEAR)
-            gregorian = self._get_event_gregorian_date(event, year)
-            
-            if gregorian == today:
+            if event.isToday():
                 self._today_events.append({
                     **event,
-                    "gregorian_date": str(today),
                 })
 
     @property
@@ -210,6 +162,41 @@ class HebrewCalendarTodaySensor(HebrewCalendarBaseSensor):
     def extra_state_attributes(self) -> Dict[str, Any]:
         """פרטי האירועים של היום."""
         return {"events_today": self._today_events}
+
+
+class HebrewCalendarTodayReminders(HebrewCalendarBaseSensor):
+    """
+    סנסור שמציג אירועים להם יש תזכורת היום.
+    """
+
+    _attr_icon = "mdi:calendar-today"
+
+    def __init__(self, *args, **kwargs) -> None:
+        """אתחול."""
+        super().__init__(*args, **kwargs)
+        self._attr_unique_id = f"{self._entry.entry_id}_today"
+        self._attr_name = "Hebrew Calendar Today"
+        self._today_reminders: List[Event] = []
+
+    async def async_update(self) -> None:
+        """עדכון: מחפש אירועים שלהם יש תזכורת היום."""
+        all_events = self._storage.get_events_sync()
+        self._today_reminders = []
+        for event in all_events:
+            if event.isReminderToday():
+                self._today_reminders.append({
+                    **event
+                })
+
+    @property
+    def state(self) -> int:
+        """מספר האירועים שמתרחשים היום."""
+        return len(self._today_reminders)
+
+    @property
+    def extra_state_attributes(self) -> Dict[str, Any]:
+        """פרטי האירועים של היום."""
+        return {"events_today": self._today_reminders}
 
 
 class HebrewCalendarUpcomingSensor(HebrewCalendarBaseSensor):

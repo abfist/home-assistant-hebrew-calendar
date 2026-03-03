@@ -1,0 +1,105 @@
+import logging
+from HebrewDateConverter import HebrewDateConverter
+import const
+from datetime import date
+_LOGGER = logging.getLogger(__name__)
+
+class Event:
+  id: str
+  event_name: str
+  event_type: str
+  hebrew_day: int
+  hebrew_month: int
+  hebrew_year: int
+  is_recurring: bool
+  reminders: list[int]
+#   gregorian_date: str
+#   days_until: int
+#   hebrew_date_string:str
+  @property
+  def original_gregorian_date(self):
+    gregorianDate=self.getOriginalGregorianDate()
+    return str(gregorianDate) if gregorianDate else None
+  
+
+  @property
+  def gregorian_date(self):
+    gregorianDate=self.getGregorianDate()
+    return str(gregorianDate) if gregorianDate else None
+   
+  def getGregorianDate(self):
+    try:
+   
+      return HebrewDateConverter.hebrewToGregorian(
+          self[const.ATTR_HEBREW_DAY],
+          self[const.ATTR_HEBREW_MONTH],
+          self._getHebrewYear(),
+      )
+    except Exception as e:
+        _LOGGER.debug("Could not get gregorian date for event %s: %s", self.get("id"), e)
+        return None
+    
+  def getOriginalGregorianDate(self):
+    try:
+      if self.hebrew_year is None:
+        year = HebrewDateConverter.getCurrentHebrewYear()
+      else:
+        year=self.hebrew_year
+            
+        return HebrewDateConverter.hebrewToGregorian(
+            self[const.ATTR_HEBREW_DAY],
+            self[const.ATTR_HEBREW_MONTH],
+            year,
+        )
+    except Exception as e:
+        _LOGGER.debug("Could not get gregorian date for event %s: %s", self.get("id"), e)
+        return None
+    
+
+  @property
+  def days_until(self):
+    gregorianDate=self.getGregorianDate()
+    return (gregorianDate - date.today()).days if gregorianDate else None
+  
+  @property
+  def hebrew_date_string(self):
+    return HebrewDateConverter.hebrewDateToString(
+        self[const.ATTR_HEBREW_DAY],
+        self[const.ATTR_HEBREW_MONTH],
+        self._getHebrewYear(),
+    )
+  
+
+  def _getHebrewYear(self):
+    '''מחזיר את השנה לחישובים השונים מתחשב באם זה ארוע חוזר או ארוע יחיד'''
+    # fixMe: need to handle dates that passed so the next year will be handled for reminders
+    if self.is_recurring or self.hebrew_year:
+       year=HebrewDateConverter.getCurrentHebrewYear()
+    else:
+       year=self.hebrew_year
+    return  year
+
+  def isToday(self):
+    if self.days_until==0:
+      return True
+    
+  def isReminderToday(self):
+    if self.days_until in self.reminders:
+      return True
+    
+    
+        # enriched_events = []
+        # for event in self._events:
+        #     year = today_hebrew["year"] if event.get(ATTR_IS_RECURRING) else event.get(ATTR_HEBREW_YEAR)
+        #     gregorian = self._get_event_gregorian_date(event, year)
+            
+        #     enriched = {
+        #         **event,
+        #         "hebrew_date_string": self._converter.hebrew_date_to_string(
+        #             event[ATTR_HEBREW_DAY],
+        #             event[ATTR_HEBREW_MONTH],
+        #             year,
+        #         ),
+        #         "gregorian_date": str(gregorian) if gregorian else None,
+        #         "days_until": (gregorian - date.today()).days if gregorian else None,
+        #     }

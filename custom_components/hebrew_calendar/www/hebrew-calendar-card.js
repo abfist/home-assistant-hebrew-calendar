@@ -7,12 +7,12 @@
 
 const HEBREW_MONTHS = {
   7:'תשרי',8:'חשון',9:'כסלו',10:'טבת',11:'שבט',
-  13:'אדר א׳',12:'אדר',1:'ניסן',2:'אייר',3:'סיון',
+  13:'אדר ב׳',12:'אדר',1:'ניסן',2:'אייר',3:'סיון',
   4:'תמוז',5:'אב',6:'אלול'
 };
 
 function getMonthName(month, year) {
-  return map[month] || String(month);
+  return HEBREW_MONTHS[month] || String(month);
 }
 
 // function getMonthName(month, year) {
@@ -139,8 +139,8 @@ class HebrewCalendarDialog extends HTMLElement {
     const ev = this._editingEvent;
     const title = ev ? `עריכת: ${ev.event_name}` : 'הוספת אירוע חדש';
 
-    const monthOptions = Object.entries(HEBREW_MONTHS_LEAP)
-      .map(([n,name]) => `<option value="${n}">${name}</option>`).join('');
+    const monthOptions = Object.entries(HEBREW_MONTHS)
+      .map(([key,name]) => `<option value="${key}">${name}</option>`).join('');
     const typeOptions = EVENT_TYPES
       .map(t => `<option value="${t}">${t}</option>`).join('');
 
@@ -194,7 +194,7 @@ class HebrewCalendarDialog extends HTMLElement {
           <div class="hc-half">
             <div class="hc-row">
               <label>יום *</label>
-              <input id="hc-day" type="number" min="1" max="30" placeholder="1-30"
+              <input id="hc-day" type="number" min="1" max="31" placeholder="1-31"
                 value="${ev ? ev.hebrew_day : ''}">
             </div>
             <div class="hc-row">

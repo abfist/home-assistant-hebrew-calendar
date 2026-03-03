@@ -6,7 +6,7 @@ Hebrew Calendar Storage
 
 מאפשר: טעינה, שמירה, הוספה, עריכה, מחיקה של אירועים ותזכורות.
 """
-
+from Event import Event
 import logging
 import uuid
 from typing import Any, Dict, List, Optional
@@ -34,7 +34,7 @@ class HebrewCalendarStorage:
         """
         self._hass = hass
         self._store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-        self._events: Dict[str, Dict[str, Any]] = {}
+        self._events: Dict[str, Event] = {}
 
     async def async_load(self) -> None:
         """
@@ -53,16 +53,16 @@ class HebrewCalendarStorage:
         """שמירת כל האירועים לאחסון."""
         await self._store.async_save({"events": self._events})
 
-    async def async_get_events(self) -> List[Dict[str, Any]]:
+    async def async_get_events(self) -> List[Event]:
         """
         קבלת רשימת כל האירועים.
         
         Returns:
-            רשימת dicts, כל dict מייצג אירוע
+            רשימת ארועים
         """
         return list(self._events.values())
 
-    async def async_get_event(self, event_id: str) -> Optional[Dict[str, Any]]:
+    async def async_get_event(self, event_id: str) -> Optional[Event]:
         """
         קבלת אירוע בודד לפי מזהה.
         
@@ -74,7 +74,7 @@ class HebrewCalendarStorage:
         """
         return self._events.get(event_id)
 
-    async def async_add_event(self, event_data: Dict[str, Any]) -> str:
+    async def async_add_event(self, event_data: Event) -> str:
         """
         הוספת אירוע חדש.
         
@@ -94,7 +94,7 @@ class HebrewCalendarStorage:
         await self.async_save()
         return event_id
 
-    async def async_edit_event(self, event_id: str, event_data: Dict[str, Any]) -> bool:
+    async def async_edit_event(self, event_id: str, event_data: Event) -> bool:
         """
         עריכת אירוע קיים.
         
@@ -179,7 +179,7 @@ class HebrewCalendarStorage:
         await self.async_save()
         return True
 
-    def get_events_sync(self) -> List[Dict[str, Any]]:
+    def get_events_sync(self) -> List[Event]:
         """
         קבלת רשימת אירועים בצורה סינכרונית (לשימוש ב-sensor).
         
