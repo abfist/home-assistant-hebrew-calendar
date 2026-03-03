@@ -1,5 +1,5 @@
 import logging
-from HebrewDateConverter import HebrewDateConverter
+from .HebrewDateConverter import HebrewDateConverter
 import const
 from datetime import date
 _LOGGER = logging.getLogger(__name__)

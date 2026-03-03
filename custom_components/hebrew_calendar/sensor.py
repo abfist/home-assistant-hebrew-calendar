@@ -11,10 +11,10 @@ Hebrew Calendar Sensor Platform
 
 import logging
 import copy
-from Event import Event
+from .Event import Event
 from datetime import date, timedelta
 from typing import Any, Dict, List, Optional
-from HebrewDateConverter import HebrewDateConverter
+from .HebrewDateConverter import HebrewDateConverter
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
