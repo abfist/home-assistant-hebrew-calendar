@@ -1,6 +1,5 @@
 import logging
 from .HebrewDateConverter import HebrewDateConverter
-import const
 from datetime import date
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,8 +30,8 @@ class Event:
     try:
    
       return HebrewDateConverter.hebrewToGregorian(
-          self[const.ATTR_HEBREW_DAY],
-          self[const.ATTR_HEBREW_MONTH],
+          self["day"],
+          self["month"],
           self._getHebrewYear(),
       )
     except Exception as e:
@@ -47,8 +46,8 @@ class Event:
         year=self.hebrew_year
             
         return HebrewDateConverter.hebrewToGregorian(
-            self[const.ATTR_HEBREW_DAY],
-            self[const.ATTR_HEBREW_MONTH],
+            self["day"],
+            self["month"],
             year,
         )
     except Exception as e:
@@ -64,8 +63,8 @@ class Event:
   @property
   def hebrew_date_string(self):
     return HebrewDateConverter.hebrewDateToString(
-        self[const.ATTR_HEBREW_DAY],
-        self[const.ATTR_HEBREW_MONTH],
+        self["day"],
+        self["month"],
         self._getHebrewYear(),
     )
   
