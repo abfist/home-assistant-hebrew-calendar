@@ -6,7 +6,7 @@ Hebrew Calendar Storage
 
 מאפשר: טעינה, שמירה, הוספה, עריכה, מחיקה של אירועים ותזכורות.
 """
-from Event import Event
+from .Event import Event
 import logging
 import uuid
 from typing import Any, Dict, List, Optional
