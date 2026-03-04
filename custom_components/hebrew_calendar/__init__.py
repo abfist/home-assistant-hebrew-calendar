@@ -13,6 +13,7 @@ Hebrew Calendar Events Integration for Home Assistant
 
 import logging
 from datetime import date, timedelta
+from .Event import Event
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
