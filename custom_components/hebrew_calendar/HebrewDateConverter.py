@@ -29,7 +29,7 @@ class HebrewDateConverter:
         return HebrewDateConverter._pyluach_gregorian_to_hebrew(gregorian_date)
         
     @staticmethod
-    def hebrewToGregorian(self, day: int, month: int, year: int) -> date:
+    def hebrewToGregorian( day: int, month: int, year: int) -> date:
         """
         המרת תאריך עברי לתאריך גרגוריאני.
         
@@ -72,19 +72,19 @@ class HebrewDateConverter:
     def getCurrentHebrewYear() -> int:
         """מחזיר את השנה העברית הנוכחית."""
         today = date.today()
-        hebrewDate = HebrewDateConverter.gregorian_to_hebrew(today)
+        hebrewDate = HebrewDateConverter.gregorianToHebrew(today)
         return hebrewDate["year"]
     
     @staticmethod
     def getCurrentHebrewDay()->int:
         """מחזיר את היום העברי הנוכחי."""
-        hebrewDate=HebrewDateConverter.gregorian_to_hebrew(date.today())
+        hebrewDate=HebrewDateConverter.gregorianToHebrew(date.today())
         return hebrewDate["day"]
     
     @staticmethod
     def getCurrentHebrewMonth()->int:
         """מחזיר את החודש העברי הנוכחי."""
-        hebrewDate=HebrewDateConverter.gregorian_to_hebrew(date.today())
+        hebrewDate=HebrewDateConverter.gregorianToHebrew(date.today())
         return hebrewDate["month"]
     
     @staticmethod

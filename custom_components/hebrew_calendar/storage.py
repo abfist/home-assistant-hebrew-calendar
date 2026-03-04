@@ -55,7 +55,7 @@ class HebrewCalendarStorage:
 
     async def async_save(self) -> None:
         """שמירת כל האירועים לאחסון."""
-        await self._store.async_save({"events": self._events})
+        await self._store.async_save({"events": {k: v.as_dict() for k, v in self._events.items()}})
 
     async def async_get_events(self) -> List[Event]:
         """
@@ -64,7 +64,7 @@ class HebrewCalendarStorage:
         Returns:
             רשימת ארועים
         """
-        return list(self._events.values())
+        return Event.fromEventList(list(self._events.values()))
 
     async def async_get_event(self, event_id: str) -> Optional[Event]:
         """
@@ -76,7 +76,7 @@ class HebrewCalendarStorage:
         Returns:
             dict האירוע, או None אם לא נמצא
         """
-        return self._events.get(event_id)
+        return Event.fromDict(self._events.get(event_id))
 
     async def async_add_event(self, event_data: Dict[str,Any]) -> str:
         """
@@ -112,11 +112,7 @@ class HebrewCalendarStorage:
         
         # שמירת ה-ID המקורי
         existing = self._events[event_id]
-        self._events[event_id] = {
-            "id": event_id,
-            **event_data,
-            ATTR_REMINDERS: list(set(event_data.get(ATTR_REMINDERS, existing.get(ATTR_REMINDERS, [])))),
-        }
+        self._events[event_id] = Event.fromDict(event_data)
         await self.async_save()
         return True
 
@@ -155,7 +151,7 @@ class HebrewCalendarStorage:
         
         reminders = set(self._events[event_id].get(ATTR_REMINDERS, []))
         reminders.add(days)
-        self._events[event_id][ATTR_REMINDERS] = sorted(list(reminders))
+        self._events[event_id].reminders = sorted(list(reminders))
         await self.async_save()
         return True
 
@@ -176,7 +172,7 @@ class HebrewCalendarStorage:
         
         reminders = set(self._events[event_id].get(ATTR_REMINDERS, []))
         reminders.discard(days)
-        self._events[event_id][ATTR_REMINDERS] = sorted(list(reminders))
+        self._events[event_id].reminders = sorted(list(reminders))
         await self.async_save()
         return True
 

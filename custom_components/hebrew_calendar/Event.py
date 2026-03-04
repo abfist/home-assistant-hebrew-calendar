@@ -64,8 +64,8 @@ class Event:
     try:
    
       return HebrewDateConverter.hebrewToGregorian(
-          self["day"],
-          self["month"],
+          self.hebrew_day,
+          self.hebrew_month,
           self._getHebrewYear(),
       )
     except Exception as e:
@@ -79,11 +79,11 @@ class Event:
       else:
         year=self.hebrew_year
             
-        return HebrewDateConverter.hebrewToGregorian(
-            self["day"],
-            self["month"],
-            year,
-        )
+      return HebrewDateConverter.hebrewToGregorian(
+          self.hebrew_day,
+          self.hebrew_month,
+          year
+      )
     except Exception as e:
         _LOGGER.debug("Could not get gregorian date for event %s: %s", self.id, e)
         return None
@@ -97,8 +97,8 @@ class Event:
   @property
   def hebrew_date_string(self):
     return HebrewDateConverter.hebrewDateToString(
-        self["day"],
-        self["month"],
+        self.hebrew_day,
+        self.hebrew_month,
         self._getHebrewYear(),
     )
   
@@ -106,7 +106,7 @@ class Event:
   def _getHebrewYear(self):
     '''מחזיר את השנה לחישובים השונים מתחשב באם זה ארוע חוזר או ארוע יחיד'''
     # fixMe: need to handle dates that passed so the next year will be handled for reminders
-    if self.is_recurring or self.hebrew_year:
+    if self.is_recurring or not self.hebrew_year:
        year=HebrewDateConverter.getCurrentHebrewYear()
     else:
        year=self.hebrew_year

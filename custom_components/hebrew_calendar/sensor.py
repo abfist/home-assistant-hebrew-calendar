@@ -149,7 +149,7 @@ class HebrewCalendarTodaySensor(HebrewCalendarBaseSensor):
         self._today_events = []
         for event in all_events:
             if event.isToday():
-                self._today_events.append(Event.from_event(event))
+                self._today_events.append(Event.fromEvent(event))
 
     @property
     def state(self) -> int:
@@ -172,8 +172,8 @@ class HebrewCalendarTodayReminders(HebrewCalendarBaseSensor):
     def __init__(self, *args, **kwargs) -> None:
         """אתחול."""
         super().__init__(*args, **kwargs)
-        self._attr_unique_id = f"{self._entry.entry_id}_today_reminders"
-        self._attr_name = "Hebrew Calendar Today"
+        self._attr_unique_id = f"{self._entry.entry_id}_reminders_today"
+        self._attr_name = "Hebrew Calendar Reminders Today"
         self._today_reminders: List[Event] = []
 
     async def async_update(self) -> None:
