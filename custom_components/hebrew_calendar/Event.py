@@ -57,7 +57,7 @@ class Event:
   def fromEventList(eventList: List["Event"]) -> List["Event"]:
     copyOfList:List["Event"]=[]
     for event in eventList:
-      copyOfList.append(Event.from_event(event))
+      copyOfList.append(Event.fromEvent(event))
     return copyOfList
    
   def getGregorianDate(self):
@@ -69,7 +69,7 @@ class Event:
           self._getHebrewYear(),
       )
     except Exception as e:
-        _LOGGER.debug("Could not get gregorian date for event %s: %s", self.get("id"), e)
+        _LOGGER.debug("Could not get gregorian date for event %s: %s", self.id, e)
         return None
     
   def getOriginalGregorianDate(self):
@@ -85,7 +85,7 @@ class Event:
             year,
         )
     except Exception as e:
-        _LOGGER.debug("Could not get gregorian date for event %s: %s", self.get("id"), e)
+        _LOGGER.debug("Could not get gregorian date for event %s: %s", self.id, e)
         return None
     
 
