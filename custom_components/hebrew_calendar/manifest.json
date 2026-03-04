@@ -2,6 +2,7 @@
   "domain": "hebrew_calendar",
   "name": "Hebrew Calendar Events",
   "version": "1.0.0",
+  "icon": "brands/icon.png",
   "documentation": "https://github.com/your-repo/hebrew-calendar-ha",
   "issue_tracker": "https://github.com/your-repo/hebrew-calendar-ha/issues",
   "dependencies": [],
