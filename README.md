@@ -1,297 +1,295 @@
-# Hebrew Calendar Events Integration for Home Assistant
+# Hebrew Calendar Events
 
-אינטגרציה לניהול אירועים עם תאריכים עבריים ב-Home Assistant.
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![GitHub Release](https://img.shields.io/github/release/your-repo/hebrew-calendar-ha.svg)](https://github.com/your-repo/hebrew-calendar-ha/releases)
+![Minimum HA Version](https://img.shields.io/badge/HA-2023.1.0%2B-blue)
 
-[![HACS Custom][hacs-badge]](https://hacs.xyz)
-[![Version][version-badge]](https://github.com/your-repo/hebrew-calendar-ha)
-
----
-
-## תכונות
-
-- 📅 ניהול מלא של אירועים עם תאריכים עבריים
-- 🔔 תזכורות מרובות לכל אירוע (N ימים לפני)
-- 🔄 תמיכה באירועים חוזרים ואירועים חד-פעמיים
-- ⚡ Triggers לאוטומציות בזמן האירוע ובזמן התזכורת
-- 🖥️ כרטיס Lovelace מובנה לניהול אירועים
-- 📆 אינטגרציה עם לוח השנה הפנימי של HA
-- 🌐 תמיכה בשיתוף עם Google Calendar ו-Outlook
+A Home Assistant custom integration for managing events based on the **Hebrew (Jewish) calendar**. Track birthdays, yahrzeits, anniversaries, and other recurring or one-time events — all anchored to Hebrew dates, with automatic conversion to Gregorian dates, reminder support, and a custom Lovelace card.
 
 ---
 
-## התקנה דרך HACS
+## Features
 
-1. פתח HACS ב-Home Assistant
-2. לחץ על "Integrations" ואז על "Explore & Download Repositories"
-3. חפש "Hebrew Calendar Events"
-4. לחץ "Download"
-5. הפעל מחדש את HA
-
-### התקנה ידנית
-
-1. העתק את תיקיית `custom_components/hebrew_calendar` לתוך `custom_components/` של HA
-2. העתק את `www/hebrew-calendar-card.js` לתוך `www/` של HA
-3. הפעל מחדש את HA
+- 📅 **Create, edit, and delete events** using Hebrew dates
+- 🔁 **Recurring events** — automatically recalculates every year
+- 🔔 **Reminders** — fire automation triggers N days before any event
+- 📊 **Four sensors** exposing events to dashboards and automations
+- 🗓️ **Calendar entity** — integrates with the HA calendar view and Google Calendar / Outlook
+- 🃏 **Custom Lovelace card** (`hebrew-calendar-card`) included
+- 🔧 **UI configuration** — set up entirely from Settings → Integrations, no YAML required
 
 ---
 
-## הגדרה
+## Supported Event Types
 
-1. עבור ל-Settings > Integrations > Add Integration
-2. חפש "Hebrew Calendar Events"
-3. לחץ "Submit"
-
-### הוספת הכרטיס ל-Lovelace
-
-הוסף ב-resources:
-```yaml
-resources:
-  - url: /local/hebrew-calendar-card.js
-    type: module
-```
-
-הוסף כרטיס:
-```yaml
-type: custom:hebrew-calendar-card
-entity: sensor.hebrew_calendar_events
-title: לוח שנה עברי
-```
+| Type | Hebrew |
+|------|--------|
+| Birthday | יום הולדת |
+| Yahrzeit | יארצייט |
+| Anniversary | יום נישואין |
+| Holiday | חג |
+| Other | אחר |
 
 ---
 
-## שירותים
+## Installation
 
-### `hebrew_calendar.add_event` - הוספת אירוע
+### HACS (Recommended)
 
-```yaml
-service: hebrew_calendar.add_event
-data:
-  event_name: "יום הולדת יוסי"
-  event_type: "יום הולדת"
-  hebrew_day: 15
-  hebrew_month: 1        # 1=תשרי
-  is_recurring: true
-  reminders: [7, 1]      # תזכורת שבוע לפני ויום לפני
-```
+1. Open **HACS** in your Home Assistant instance.
+2. Go to **Integrations** → click the three-dot menu → **Custom repositories**.
+3. Add the repository URL and select category **Integration**.
+4. Search for **Hebrew Calendar Events** and click **Download**.
+5. Restart Home Assistant.
 
-### `hebrew_calendar.edit_event` - עריכת אירוע
+### Manual
 
-```yaml
-service: hebrew_calendar.edit_event
-data:
-  event_id: "a1b2c3d4-..."
-  event_name: "שם חדש"
-  event_type: "יום הולדת"
-  hebrew_day: 15
-  hebrew_month: 1
-  is_recurring: true
-  reminders: [7]
-```
-
-### `hebrew_calendar.remove_event` - מחיקת אירוע
-
-```yaml
-service: hebrew_calendar.remove_event
-data:
-  event_id: "a1b2c3d4-..."
-```
-
-### `hebrew_calendar.add_reminder` - הוספת תזכורת
-
-```yaml
-service: hebrew_calendar.add_reminder
-data:
-  event_id: "a1b2c3d4-..."
-  reminder_days: 7
-```
-
-### `hebrew_calendar.remove_reminder` - הסרת תזכורת
-
-```yaml
-service: hebrew_calendar.remove_reminder
-data:
-  event_id: "a1b2c3d4-..."
-  reminder_days: 7
-```
+1. Copy the `hebrew_calendar` folder into your `config/custom_components/` directory.
+2. Copy `hebrew-calendar-card.js` into your `config/www/` directory.
+3. Restart Home Assistant.
 
 ---
 
-## Triggers לאוטומציות
+## Configuration
 
-### אירוע מתרחש היום
+1. Go to **Settings → Devices & Services → Add Integration**.
+2. Search for **Hebrew Calendar Events** and click it.
+3. Confirm the setup — no credentials or additional input required.
 
-האירוע `hebrew_calendar_event_today` מופעל בחצות כל יום עבור כל אירוע שמתרחש באותו יום.
-
-```yaml
-automation:
-  trigger:
-    platform: event
-    event_type: hebrew_calendar_event_today
-  action:
-    service: notify.mobile_app
-    data:
-      message: "היום הוא {{ trigger.event.data.event_name }}!"
-```
-
-**נתונים זמינים ב-trigger.event.data:**
-| שדה | תיאור |
-|-----|-------|
-| `event_id` | מזהה ייחודי של האירוע |
-| `event_name` | שם האירוע |
-| `event_type` | סוג האירוע |
-| `hebrew_date` | תאריך עברי כמחרוזת |
-| `gregorian_date` | תאריך גרגוריאני |
-| `is_recurring` | האם האירוע חוזר |
-
-### תזכורת לאירוע
-
-האירוע `hebrew_calendar_reminder_today` מופעל בחצות ביום שמתאים לתזכורת.
-
-```yaml
-automation:
-  trigger:
-    platform: event
-    event_type: hebrew_calendar_reminder_today
-  action:
-    service: notify.mobile_app
-    data:
-      message: >
-        תזכורת: {{ trigger.event.data.event_name }}
-        בעוד {{ trigger.event.data.days_until_event }} ימים
-        ({{ trigger.event.data.event_gregorian_date }})
-```
-
-**נתונים זמינים ב-trigger.event.data:**
-| שדה | תיאור |
-|-----|-------|
-| `event_id` | מזהה האירוע |
-| `event_name` | שם האירוע |
-| `event_type` | סוג האירוע |
-| `days_until_event` | כמה ימים עד האירוע |
-| `event_hebrew_date` | תאריך עברי של האירוע |
-| `event_gregorian_date` | תאריך גרגוריאני של האירוע |
-| `reminder_days` | הגדרת התזכורת (X ימים לפני) |
-
-### סינון לפי סוג אירוע
-
-ניתן לסנן triggers לפי סוג אירוע ספציפי:
-
-```yaml
-automation:
-  trigger:
-    platform: event
-    event_type: hebrew_calendar_event_today
-    event_data:
-      event_type: "יארצייט"   # רק יארצייטים
-  action:
-    service: notify.mobile_app
-    data:
-      message: "יארצייט: {{ trigger.event.data.event_name }}"
-```
-
-### דוגמת אוטומציה מלאה
-
-```yaml
-# שליחת הודעה 7 ימים לפני יום הולדת
-automation:
-  alias: "תזכורת יום הולדת שבועית"
-  trigger:
-    platform: event
-    event_type: hebrew_calendar_reminder_today
-  condition:
-    - condition: template
-      value_template: >
-        {{ trigger.event.data.event_type == 'יום הולדת'
-           and trigger.event.data.days_until_event == 7 }}
-  action:
-    - service: notify.family_group
-      data:
-        title: "🎂 יום הולדת מתקרב!"
-        message: >
-          בעוד שבוע: {{ trigger.event.data.event_name }}
-          תאריך: {{ trigger.event.data.event_gregorian_date }}
-```
+> Only one instance of this integration can be installed at a time.
 
 ---
 
 ## Sensors
 
-| Entity | תיאור |
-|--------|-------|
-| `sensor.hebrew_calendar_events` | כל האירועים + state = מספר כולל |
-| `sensor.hebrew_calendar_today` | אירועי היום |
-| `sensor.hebrew_calendar_upcoming` | אירועים ב-30 ימים הקרובים |
-| `calendar.hebrew_calendar` | לוח שנה מלא לשיתוף עם Google/Outlook |
+The integration creates four sensor entities:
 
----
+| Entity | Description | State |
+|--------|-------------|-------|
+| `sensor.hebrew_calendar_events` | All events | Total event count |
+| `sensor.hebrew_calendar_today` | Events occurring today | Count of today's events |
+| `sensor.hebrew_calendar_upcoming` | Events in the next 30 days | Count of upcoming events |
+| `sensor.hebrew_calendar_reminders_today` | Events with a reminder due today | Count of reminders today |
 
-## שיתוף עם Google Calendar / Outlook
+### Sensor Attributes
 
-האינטגרציה יוצרת `calendar.hebrew_calendar`. על מנת לשתף:
+Each sensor exposes its events as attributes. Every event object contains:
 
-**Google Calendar:**
-1. התקן את ה-Google Calendar integration
-2. קשר את `calendar.hebrew_calendar` לחשבון Google שלך
-
-**Outlook:**
-1. התקן את ה-Microsoft 365 integration
-2. קשר את `calendar.hebrew_calendar` לחשבון Microsoft שלך
-
----
-
-## דרישות
-
-- Home Assistant 2023.1.0 ומעלה
-- Python package: `pyluach` (מותקן אוטומטית)
-
----
-
-## מבנה הקבצים
-
-```
-custom_components/hebrew_calendar/
-├── __init__.py          # לוגיקה ראשית, רישום שירותים, triggers
-├── config_flow.py       # הגדרה דרך UI
-├── const.py             # קבועים
-├── sensor.py            # sensor platforms
-├── calendar.py          # calendar platform
-├── storage.py           # אחסון מתמיד
-├── hebrew_date.py       # המרת תאריכים עברי-גרגוריאני
-├── services.yaml        # הגדרות שירותים
-├── manifest.json        # מטא-דאטה
-└── translations/
-    ├── he.json
-    └── en.json
-
-www/
-└── hebrew-calendar-card.js   # כרטיס Lovelace
+```yaml
+id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+event_name: "Yossi's Birthday"
+event_type: "יום הולדת"
+hebrew_day: 15
+hebrew_month: 1
+hebrew_year: null          # null for recurring events
+is_recurring: true
+reminders: [7, 1]          # days before the event
+hebrew_date_string: "ט״ו בתשרי תשפ״ה"
+gregorian_date: "2024-10-17"
+days_until: 12
 ```
 
----
-
-## חודשים עבריים
-
-| מספר | שם |
-|------|----|
-| 1 | תשרי |
-| 2 | חשון |
-| 3 | כסלו |
-| 4 | טבת |
-| 5 | שבט |
-| 6 | אדר (בשנה פשוטה) |
-| 7 | ניסן |
-| 8 | אייר |
-| 9 | סיון |
-| 10 | תמוז |
-| 11 | אב |
-| 12 | אלול |
-| 13 | אדר ב׳ (בשנה מעוברת) |
+The `sensor.hebrew_calendar_events` sensor also includes:
+- `total_count` — total number of stored events
+- `current_hebrew_date` — today's Hebrew date as a readable string
 
 ---
 
-## רישיון
+## Services
 
-MIT License
+### `hebrew_calendar.add_event`
 
-[hacs-badge]: https://img.shields.io/badge/HACS-Custom-orange.svg
-[version-badge]: https://img.shields.io/badge/version-1.0.0-blue.svg
+Add a new event to the calendar.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `event_name` | ✅ | Display name of the event |
+| `event_type` | ✅ | One of the predefined event types |
+| `hebrew_day` | ✅ | Day in the Hebrew month (1–30) |
+| `hebrew_month` | ✅ | Hebrew month (1–13) |
+| `hebrew_year` | ❌ | Required only for one-time (non-recurring) events |
+| `is_recurring` | ❌ | Whether the event repeats annually (default: `true`) |
+| `reminders` | ❌ | List of days-before to trigger reminders, e.g. `[7, 1]` |
+
+**Example:**
+
+```yaml
+service: hebrew_calendar.add_event
+data:
+  event_name: "Yossi's Birthday"
+  event_type: "יום הולדת"
+  hebrew_day: 15
+  hebrew_month: 1
+  is_recurring: true
+  reminders:
+    - 7
+    - 1
+```
+
+---
+
+### `hebrew_calendar.edit_event`
+
+Edit an existing event by its ID.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `event_id` | ✅ | UUID of the event to edit |
+| *(all other fields same as `add_event`)* | ✅ | |
+
+---
+
+### `hebrew_calendar.remove_event`
+
+Remove an event by its ID.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `event_id` | ✅ | UUID of the event to remove |
+
+---
+
+### `hebrew_calendar.add_reminder`
+
+Add a reminder to an existing event.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `event_id` | ✅ | UUID of the event |
+| `reminder_days` | ✅ | Number of days before the event (0–365) |
+
+---
+
+### `hebrew_calendar.remove_reminder`
+
+Remove a specific reminder from an event.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `event_id` | ✅ | UUID of the event |
+| `reminder_days` | ✅ | The reminder (in days) to remove |
+
+---
+
+## Automation Triggers
+
+The integration fires two HA bus events that can be used as automation triggers.
+
+### `hebrew_calendar_event_today`
+
+Fired at midnight when an event falls on today's Hebrew date.
+
+```yaml
+trigger:
+  - platform: event
+    event_type: hebrew_calendar_event_today
+```
+
+**Event data:**
+
+```yaml
+event_id: "..."
+event_name: "Yossi's Birthday"
+event_type: "יום הולדת"
+hebrew_date: "15/1/5785"
+gregorian_date: "2024-10-17"
+is_recurring: true
+```
+
+---
+
+### `hebrew_calendar_reminder_today`
+
+Fired at midnight when a reminder is due (N days before an event).
+
+```yaml
+trigger:
+  - platform: event
+    event_type: hebrew_calendar_reminder_today
+```
+
+**Event data:**
+
+```yaml
+event_id: "..."
+event_name: "Yossi's Birthday"
+event_type: "יום הולדת"
+days_until_event: 7
+event_hebrew_date: "15/1/5785"
+event_gregorian_date: "2024-10-17"
+reminder_days: 7
+```
+
+---
+
+## Lovelace Card
+
+A custom card (`hebrew-calendar-card.js`) is included to display your events in a Lovelace dashboard.
+
+### Adding the card resource
+
+Add the following to your dashboard resources (Settings → Dashboards → Resources):
+
+```yaml
+url: /local/hebrew-calendar-card.js
+type: module
+```
+
+### Card configuration
+
+```yaml
+type: custom:hebrew-calendar-card
+entity: sensor.hebrew_calendar_events
+```
+
+---
+
+## Hebrew Months Reference
+
+| # | Hebrew | Transliteration |
+|---|--------|----------------|
+| 1 | ניסן | Nisan |
+| 2 | אייר | Iyar |
+| 3 | סיון | Sivan |
+| 4 | תמוז | Tammuz |
+| 5 | אב | Av |
+| 6 | אלול | Elul |
+| 7 | תשרי | Tishrei |
+| 8 | חשון | Cheshvan |
+| 9 | כסלו | Kislev |
+| 10 | טבת | Tevet |
+| 11 | שבט | Shevat |
+| 12 | אדר | Adar |
+| 13 | אדר ב׳ | Adar II *(leap years only)* |
+
+---
+
+## Requirements
+
+- Home Assistant **2023.1.0** or newer
+- Python package: [`pyluach>=1.3.0`](https://pypi.org/project/pyluach/) — installed automatically
+
+---
+
+## Troubleshooting
+
+**Events not firing at midnight**
+Make sure your HA timezone is configured correctly in Settings → System → General.
+
+**Date conversion errors**
+The integration requires `pyluach`. If it fails to install, run `pip install pyluach` in your HA environment and restart.
+
+**Sensor not updating after adding an event**
+The sensors update in real time via HA bus events. If they appear stale, trigger a manual refresh from Developer Tools → Template.
+
+---
+
+## Contributing
+
+Pull requests are welcome! Please open an issue first to discuss any significant changes.
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
