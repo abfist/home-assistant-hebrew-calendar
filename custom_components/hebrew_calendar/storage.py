@@ -78,7 +78,7 @@ class HebrewCalendarStorage:
         """
         return self._events.get(event_id)
 
-    async def async_add_event(self, event_data: Event) -> str:
+    async def async_add_event(self, event_data: Dict[str,Any]) -> str:
         """
         הוספת אירוע חדש.
         
@@ -89,9 +89,9 @@ class HebrewCalendarStorage:
             מזהה האירוע החדש
         """
         event_id = str(uuid.uuid4())
-        event_data.id=event_id
-        event_data.reminders=list(set(event_data.get(ATTR_REMINDERS, [])))  # הסרת כפילויות
-        self._events[event_id] = event_data
+        event_data["id"]=event_id
+        event_data[ATTR_REMINDERS]=list(set(event_data.get(ATTR_REMINDERS, [])))  # הסרת כפילויות
+        self._events[event_id] = Event.fromDict(event_data)
         await self.async_save()
         return event_id
 
