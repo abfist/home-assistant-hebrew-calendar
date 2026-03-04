@@ -243,7 +243,7 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
                 if reminder_date == today_gregorian:
                     _LOGGER.info(
                         "Firing reminder trigger for: %s (%d days before)",
-                        event[ATTR_EVENT_NAME],
+                        event.event_name,
                         reminder_days,
                     )
                     hass.bus.async_fire(

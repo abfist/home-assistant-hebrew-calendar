@@ -63,7 +63,7 @@ class HebrewDateConverter:
     @staticmethod
     def getCurrentHebrewDate():
         """מחזיר את החודש העברי הנוכחי."""
-        hebrewDate=HebrewDateConverter.gregorian_to_hebrew(date.today())
+        hebrewDate=HebrewDateConverter.gregorianToHebrew(date.today())
         return (hebrewDate["day"],hebrewDate["month"],hebrewDate["year"])
 
 
