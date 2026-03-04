@@ -84,7 +84,7 @@ class HebrewCalendarBaseSensor(SensorEntity):
         self._hass = hass
         self._entry = entry
         self._storage = storage
-        self._events: List[Event] = []
+        self._events: Dict[str, Event] = []
 
 
 class HebrewCalendarAllEventsSensor(HebrewCalendarBaseSensor):
@@ -116,14 +116,14 @@ class HebrewCalendarAllEventsSensor(HebrewCalendarBaseSensor):
         כל פרטי האירועים כ-attributes.
         משמש את ה-Lovelace card וה-automations.
         """
-        enriched_events =copy.deepcopy(self._events)
+        eventsCopy:List[Event] =Event.fromEventList(self._events)
         
         # מיון לפי מספר ימים עד האירוע
-        enriched_events.sort(key=lambda e: (e["days_until"] is None, e.get("days_until", 9999)))
+        eventsCopy.sort(key=lambda e: (e["days_until"] is None, e.get("days_until", 9999)))
         
         return {
-            "events": enriched_events,
-            "total_count": len(enriched_events),
+            "events":eventsCopy ,
+            "total_count": len(eventsCopy),
             "current_hebrew_date": HebrewDateConverter.getCurrentHebrewDate(),
         }
 
@@ -149,9 +149,7 @@ class HebrewCalendarTodaySensor(HebrewCalendarBaseSensor):
         self._today_events = []
         for event in all_events:
             if event.isToday():
-                self._today_events.append({
-                    **event,
-                })
+                self._today_events.append(Event.from_event(event))
 
     @property
     def state(self) -> int:
@@ -159,7 +157,7 @@ class HebrewCalendarTodaySensor(HebrewCalendarBaseSensor):
         return len(self._today_events)
 
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> Dict[str, List[Event]]:
         """פרטי האירועים של היום."""
         return {"events_today": self._today_events}
 
@@ -184,9 +182,7 @@ class HebrewCalendarTodayReminders(HebrewCalendarBaseSensor):
         self._today_reminders = []
         for event in all_events:
             if event.isReminderToday():
-                self._today_reminders.append({
-                    **event
-                })
+                self._today_reminders.append(Event.fromEvent(event))
 
     @property
     def state(self) -> int:
@@ -194,14 +190,14 @@ class HebrewCalendarTodayReminders(HebrewCalendarBaseSensor):
         return len(self._today_reminders)
 
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> Dict[str, List[Event]]:
         """פרטי האירועים של היום."""
         return {"events_today": self._today_reminders}
 
 
 class HebrewCalendarUpcomingSensor(HebrewCalendarBaseSensor):
     """
-    Sensor שמציג אירועים קרובים ב-30 הימים הבאים.
+    סנסור שמציג אירועים קרובים ב-30 הימים הבאים.
     """
 
     _attr_icon = "mdi:calendar-clock"
@@ -211,31 +207,18 @@ class HebrewCalendarUpcomingSensor(HebrewCalendarBaseSensor):
         super().__init__(*args, **kwargs)
         self._attr_unique_id = f"{self._entry.entry_id}_upcoming"
         self._attr_name = "Hebrew Calendar Upcoming"
-        self._upcoming_events: List[Dict[str, Any]] = []
+        self._upcoming_events: List[Event] = []
+        # self._upcoming_events: List[Dict[str, Any]] = []
 
     async def async_update(self) -> None:
         """עדכון: מחפש אירועים ב-30 הימים הקרובים."""
         all_events = self._storage.get_events_sync()
         today = date.today()
-        future_limit = today + timedelta(days=30)
-        today_hebrew = self._converter.gregorian_to_hebrew(today)
-        
+        future_limit = today + timedelta(days=30)        
         self._upcoming_events = []
         for event in all_events:
-            year = today_hebrew["year"] if event.get(ATTR_IS_RECURRING) else event.get(ATTR_HEBREW_YEAR)
-            gregorian = self._get_event_gregorian_date(event, year)
-            
-            if gregorian and today <= gregorian <= future_limit:
-                days_until = (gregorian - today).days
-                self._upcoming_events.append({
-                    **event,
-                    "gregorian_date": str(gregorian),
-                    "days_until": days_until,
-                    "hebrew_date_string": self._converter.hebrew_date_to_string(
-                        event[ATTR_HEBREW_DAY], event[ATTR_HEBREW_MONTH], year
-                    ),
-                })
-        
+            if event.gregorian_date and today <= event.gregorian_date <= future_limit:
+                self._upcoming_events.append(Event.fromEvent(event))
         self._upcoming_events.sort(key=lambda e: e["days_until"])
 
     @property
@@ -244,6 +227,6 @@ class HebrewCalendarUpcomingSensor(HebrewCalendarBaseSensor):
         return len(self._upcoming_events)
 
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> Dict[str, List[Event]]:
         """פרטי האירועים הקרובים."""
         return {"upcoming_events": self._upcoming_events}

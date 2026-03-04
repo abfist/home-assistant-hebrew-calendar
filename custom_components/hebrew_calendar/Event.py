@@ -1,4 +1,5 @@
 import logging
+from typing import List
 from .HebrewDateConverter import HebrewDateConverter
 from datetime import date
 _LOGGER = logging.getLogger(__name__)
@@ -25,6 +26,39 @@ class Event:
   def gregorian_date(self):
     gregorianDate=self.getGregorianDate()
     return str(gregorianDate) if gregorianDate else None
+  
+  @classmethod
+  def fromDict(cls, data: dict) -> "Event":
+    obj = cls()
+    obj.id = data["id"]
+    obj.event_name = data["event_name"]
+    obj.event_type = data["event_type"]
+    obj.hebrew_day = data["hebrew_day"]
+    obj.hebrew_month = data["hebrew_month"]
+    obj.hebrew_year = data["hebrew_year"]
+    obj.is_recurring = data["is_recurring"]
+    obj.reminders = data["reminders"]
+    return obj
+  
+  @classmethod
+  def fromEvent(cls, event: "Event") -> "Event":
+    obj = cls()
+    obj.id = event["id"]
+    obj.event_name = event["event_name"]
+    obj.event_type = event["event_type"]
+    obj.hebrew_day = event["hebrew_day"]
+    obj.hebrew_month = event["hebrew_month"]
+    obj.hebrew_year = event["hebrew_year"]
+    obj.is_recurring = event["is_recurring"]
+    obj.reminders = event["reminders"]
+    return obj
+  
+  @staticmethod
+  def fromEventList(cls, eventList: List["Event"]) -> List["Event"]:
+    copyOfList:List["Event"]=[]
+    for event in eventList:
+      copyOfList.append(Event.from_event(event))
+    return copyOfList
    
   def getGregorianDate(self):
     try:

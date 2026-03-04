@@ -43,7 +43,11 @@ class HebrewCalendarStorage:
         """
         data = await self._store.async_load()
         if data is not None:
-            self._events = data.get("events", {})
+            events=data.get("events", {})
+            self._events: Dict[str, Event] = {}
+            for key, value in events.items():
+                self._events[key] = Event.from_dict(value)
+        #     self._events = data.get("events", {})
             _LOGGER.info("Loaded %d Hebrew calendar events from storage", len(self._events))
         else:
             self._events = {}
@@ -85,12 +89,9 @@ class HebrewCalendarStorage:
             מזהה האירוע החדש
         """
         event_id = str(uuid.uuid4())
-        event = {
-            "id": event_id,
-            **event_data,
-            ATTR_REMINDERS: list(set(event_data.get(ATTR_REMINDERS, []))),  # הסרת כפילויות
-        }
-        self._events[event_id] = event
+        event_data.id=event_id
+        event_data.reminders=list(set(event_data.get(ATTR_REMINDERS, [])))  # הסרת כפילויות
+        self._events[event_id] = event_data
         await self.async_save()
         return event_id
 
