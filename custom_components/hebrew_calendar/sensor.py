@@ -124,7 +124,7 @@ class HebrewCalendarAllEventsSensor(HebrewCalendarBaseSensor):
         return {
             "events":[event.as_dict() for event in eventsCopy], 
             "total_count": len(eventsCopy),
-            "current_hebrew_date": HebrewDateConverter.getCurrentHebrewDate(),
+            "current_hebrew_date": HebrewDateConverter.getCurrentHebrewDateString(),
         }
 
 
