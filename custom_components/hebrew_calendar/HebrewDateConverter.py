@@ -1,7 +1,9 @@
+from pyluach.dates import HebrewDate, GregorianDate
 import pyluach
 import logging
 from datetime import date
 from typing import Dict, Optional
+_LOGGER = logging.getLogger(__name__)
 
 class HebrewDateConverter:
     """
@@ -41,6 +43,31 @@ class HebrewDateConverter:
         """
         return HebrewDateConverter._pyluach_hebrew_to_gregorian(day, month, year)
         
+     # ============================================================
+    # מימוש עם pyluach (מדויק)
+    # ============================================================
+    @staticmethod
+    def _pyluach_gregorian_to_hebrew(gregorian_date: date) -> Dict[str, int]:
+        """המרה מגרגוריאני לעברי באמצעות pyluach."""
+        try:
+            # from pyluach.dates import HebrewDate, GregorianDate
+            g = GregorianDate(gregorian_date.year, gregorian_date.month, gregorian_date.day)
+            h = g.to_heb()
+            return {"day": h.day, "month": h.month, "year": h.year}
+        except Exception as e:
+            _LOGGER.error("pyluach conversion error: %s", e)
+
+    @staticmethod
+    def _pyluach_hebrew_to_gregorian(day: int, month: int, year: int) -> date:
+        """המרה מעברי לגרגוריאני באמצעות pyluach."""
+        try:
+            # from pyluach.dates import HebrewDate
+            h = HebrewDate(year, month, day)
+            g = h.to_greg()
+            return date(g.year, g.month, g.day)
+        except Exception as e:
+            _LOGGER.error("pyluach conversion error: %s", e)
+
     @staticmethod
     def getCurrentHebrewYear() -> int:
         """מחזיר את השנה העברית הנוכחית."""
