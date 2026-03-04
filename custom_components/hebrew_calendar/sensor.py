@@ -119,7 +119,7 @@ class HebrewCalendarAllEventsSensor(HebrewCalendarBaseSensor):
         eventsCopy:List[Event] =Event.fromEventList(self._events)
         
         # מיון לפי מספר ימים עד האירוע
-        eventsCopy.sort(key=lambda e: (e["days_until"] is None, e.get("days_until", 9999)))
+        eventsCopy.sort(key=lambda event: (event.days_until is None, event.days_until, 9999))
         
         return {
             "events":eventsCopy ,
@@ -172,7 +172,7 @@ class HebrewCalendarTodayReminders(HebrewCalendarBaseSensor):
     def __init__(self, *args, **kwargs) -> None:
         """אתחול."""
         super().__init__(*args, **kwargs)
-        self._attr_unique_id = f"{self._entry.entry_id}_today"
+        self._attr_unique_id = f"{self._entry.entry_id}_today_reminders"
         self._attr_name = "Hebrew Calendar Today"
         self._today_reminders: List[Event] = []
 
