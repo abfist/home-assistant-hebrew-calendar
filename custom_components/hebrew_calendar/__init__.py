@@ -222,7 +222,7 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
 
             # בדיקה אם היום הוא יום האירוע
             if event_gregorian == today_gregorian:
-                _LOGGER.info("Firing event trigger for: %s", event[ATTR_EVENT_NAME])
+                _LOGGER.info("Firing event trigger for: %s", event.event_name or "unknown")
                 hass.bus.async_fire(
                     EVENT_TRIGGER,
                     {
@@ -260,4 +260,4 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
                     )
 
         except Exception as e:
-            _LOGGER.error("Error processing event %s: %s", event.get(ATTR_EVENT_NAME, "unknown"), e)
+            _LOGGER.error("Error processing event %s: %s", event.event_name or "unknown", e)
