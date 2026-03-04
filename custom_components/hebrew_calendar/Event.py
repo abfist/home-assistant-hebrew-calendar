@@ -54,7 +54,7 @@ class Event:
     return obj
   
   @staticmethod
-  def fromEventList(cls, eventList: List["Event"]) -> List["Event"]:
+  def fromEventList(eventList: List["Event"]) -> List["Event"]:
     copyOfList:List["Event"]=[]
     for event in eventList:
       copyOfList.append(Event.from_event(event))
