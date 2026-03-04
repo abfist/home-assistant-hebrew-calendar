@@ -84,7 +84,7 @@ class HebrewCalendarBaseSensor(SensorEntity):
         self._hass = hass
         self._entry = entry
         self._storage = storage
-        self._events: Dict[str, Event] = []
+        self._events: Dict[str, Event] = {}
 
 
 class HebrewCalendarAllEventsSensor(HebrewCalendarBaseSensor):
@@ -219,7 +219,7 @@ class HebrewCalendarUpcomingSensor(HebrewCalendarBaseSensor):
         for event in all_events:
             if event.getGregorianDate() and today <= event.getGregorianDate() <= future_limit:
                 self._upcoming_events.append(Event.fromEvent(event))
-        self._upcoming_events.sort(key=lambda e: e["days_until"])
+        self._upcoming_events.sort(key=lambda e: e.days_until)
 
     @property
     def state(self) -> int:
