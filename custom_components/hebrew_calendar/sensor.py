@@ -217,7 +217,7 @@ class HebrewCalendarUpcomingSensor(HebrewCalendarBaseSensor):
         future_limit = today + timedelta(days=30)        
         self._upcoming_events = []
         for event in all_events:
-            if event.gregorian_date and today <= event.gregorian_date <= future_limit:
+            if event.getGregorianDate() and today <= event.getGregorianDate() <= future_limit:
                 self._upcoming_events.append(Event.fromEvent(event))
         self._upcoming_events.sort(key=lambda e: e["days_until"])
 
