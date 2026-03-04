@@ -9,6 +9,7 @@ Hebrew Calendar - Calendar Platform
 import logging
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
+from .Event import Event
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.config_entries import ConfigEntry

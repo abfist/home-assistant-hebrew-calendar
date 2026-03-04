@@ -76,7 +76,8 @@ class HebrewCalendarStorage:
         Returns:
             dict האירוע, או None אם לא נמצא
         """
-        return Event.fromDict(self._events.get(event_id))
+        event = self._events.get(event_id)
+        return Event.fromEvent(event) if event else None
 
     async def async_add_event(self, event_data: Dict[str,Any]) -> str:
         """
@@ -112,6 +113,7 @@ class HebrewCalendarStorage:
         
         # שמירת ה-ID המקורי
         existing = self._events[event_id]
+        event_data["id"] = event_id
         self._events[event_id] = Event.fromDict(event_data)
         await self.async_save()
         return True
@@ -148,8 +150,7 @@ class HebrewCalendarStorage:
         if event_id not in self._events:
             _LOGGER.warning("Tried to add reminder to non-existent event: %s", event_id)
             return False
-        
-        reminders = set(self._events[event_id].get(ATTR_REMINDERS, []))
+        reminders = set(self._events[event_id].reminders)
         reminders.add(days)
         self._events[event_id].reminders = sorted(list(reminders))
         await self.async_save()
@@ -169,8 +170,8 @@ class HebrewCalendarStorage:
         if event_id not in self._events:
             _LOGGER.warning("Tried to remove reminder from non-existent event: %s", event_id)
             return False
-        
-        reminders = set(self._events[event_id].get(ATTR_REMINDERS, []))
+        reminders = set(self._events[event_id].reminders)
+        # reminders = set(self._events[event_id].get(ATTR_REMINDERS, []))
         reminders.discard(days)
         self._events[event_id].reminders = sorted(list(reminders))
         await self.async_save()
