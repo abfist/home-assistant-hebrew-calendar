@@ -29,28 +29,28 @@ class Event:
   
   @classmethod
   def fromDict(cls, data: dict) -> "Event":
-    obj = cls()
-    obj.id = data["id"]
-    obj.event_name = data["event_name"]
-    obj.event_type = data["event_type"]
-    obj.hebrew_day = data["hebrew_day"]
-    obj.hebrew_month = data["hebrew_month"]
-    obj.hebrew_year = data.get("hebrew_year",None)  # defaults to None if missing
-    obj.is_recurring = data["is_recurring"]
-    obj.reminders = data["reminders"]
-    return obj
-  
+      obj = cls()
+      obj.id = data.get("id", "")
+      obj.event_name = data.get("event_name", "")
+      obj.event_type = data.get("event_type", "")
+      obj.hebrew_day = data.get("hebrew_day", 0)
+      obj.hebrew_month = data.get("hebrew_month", 0)
+      obj.hebrew_year = data.get("hebrew_year", None)
+      obj.is_recurring = data.get("is_recurring", True)
+      obj.reminders = data.get("reminders", []).copy()
+      return obj
+
   @classmethod
   def fromEvent(cls, event: "Event") -> "Event":
     obj = cls()
-    obj.id = event["id"]
-    obj.event_name = event["event_name"]
-    obj.event_type = event["event_type"]
-    obj.hebrew_day = event["hebrew_day"]
-    obj.hebrew_month = event["hebrew_month"]
-    obj.hebrew_year = event.get("hebrew_year",None)  # defaults to None if missing
-    obj.is_recurring = event["is_recurring"]
-    obj.reminders = event["reminders"]
+    obj.id = event.id
+    obj.event_name = event.event_name
+    obj.event_type = event.event_type
+    obj.hebrew_day = event.hebrew_day
+    obj.hebrew_month = event.hebrew_month
+    obj.hebrew_year = event.hebrew_year
+    obj.is_recurring = event.is_recurring
+    obj.reminders = event.reminders.copy()
     return obj
   
   @staticmethod

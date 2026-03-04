@@ -204,10 +204,10 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
     events = await storage.async_get_events()
 
     for event in events:
-        event_hebrew_day = event[ATTR_HEBREW_DAY]
-        event_hebrew_month = event[ATTR_HEBREW_MONTH]
-        is_recurring = event.get(ATTR_IS_RECURRING, True)
-        event_hebrew_year = event.get(ATTR_HEBREW_YEAR)
+        event_hebrew_day = event.hebrew_day
+        event_hebrew_month = event.hebrew_month
+        is_recurring = event.is_recurring
+        event_hebrew_year = event.hebrew_year
 
         # המרת תאריך האירוע לגרגוריאני
         try:
@@ -226,9 +226,9 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
                 hass.bus.async_fire(
                     EVENT_TRIGGER,
                     {
-                        "event_id": event["id"],
-                        "event_name": event[ATTR_EVENT_NAME],
-                        "event_type": event[ATTR_EVENT_TYPE],
+                        "event_id": event.id,
+                        "event_name": event.event_name,
+                        "event_type": event.event_type,
                         "hebrew_date": f"{event_hebrew_day}/{event_hebrew_month}/{year_to_check}",
                         "gregorian_date": str(today_gregorian),
                         "is_recurring": is_recurring,
@@ -249,9 +249,9 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
                     hass.bus.async_fire(
                         REMINDER_TRIGGER,
                         {
-                            "event_id": event["id"],
-                            "event_name": event[ATTR_EVENT_NAME],
-                            "event_type": event[ATTR_EVENT_TYPE],
+                            "event_id": event.id,
+                            "event_name": event.event_name,
+                            "event_type": event.event_type,
                             "days_until_event": reminder_days,
                             "event_hebrew_date": f"{event_hebrew_day}/{event_hebrew_month}/{year_to_check}",
                             "event_gregorian_date": str(event_gregorian),
