@@ -10,7 +10,7 @@ class Event:
   event_type: str
   hebrew_day: int
   hebrew_month: int
-  hebrew_year: int
+  hebrew_year: int|None
   is_recurring: bool
   reminders: list[int]
 #   gregorian_date: str
@@ -35,7 +35,7 @@ class Event:
     obj.event_type = data["event_type"]
     obj.hebrew_day = data["hebrew_day"]
     obj.hebrew_month = data["hebrew_month"]
-    obj.hebrew_year = data["hebrew_year"]
+    obj.hebrew_year = data.get("hebrew_year",None)  # defaults to None if missing
     obj.is_recurring = data["is_recurring"]
     obj.reminders = data["reminders"]
     return obj
@@ -48,7 +48,7 @@ class Event:
     obj.event_type = event["event_type"]
     obj.hebrew_day = event["hebrew_day"]
     obj.hebrew_month = event["hebrew_month"]
-    obj.hebrew_year = event["hebrew_year"]
+    obj.hebrew_year = event.get("hebrew_year",None)  # defaults to None if missing
     obj.is_recurring = event["is_recurring"]
     obj.reminders = event["reminders"]
     return obj
