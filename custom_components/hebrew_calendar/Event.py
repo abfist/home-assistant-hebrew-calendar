@@ -130,6 +130,9 @@ class Event:
         "hebrew_year": self.hebrew_year,
         "is_recurring": self.is_recurring,
         "reminders": self.reminders.copy(),
+        "hebrew_date_string": self.hebrew_date_string,
+        "gregorian_date": self.gregorian_date,
+        "days_until": self.days_until,
     }  
         # enriched_events = []
         # for event in self._events:
