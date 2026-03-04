@@ -236,7 +236,7 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
                 )
 
             # בדיקת תזכורות
-            for reminder_days in event.get(ATTR_REMINDERS, []):
+            for reminder_days in event.reminders:
                 if reminder_days == 0:
                     continue  # 0 = ללא תזכורת
                 reminder_date = event_gregorian - timedelta(days=reminder_days)
