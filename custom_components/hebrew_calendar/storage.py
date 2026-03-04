@@ -46,7 +46,7 @@ class HebrewCalendarStorage:
             events=data.get("events", {})
             self._events: Dict[str, Event] = {}
             for key, value in events.items():
-                self._events[key] = Event.from_dict(value)
+                self._events[key] = Event.fromDict(value)
         #     self._events = data.get("events", {})
             _LOGGER.info("Loaded %d Hebrew calendar events from storage", len(self._events))
         else:
