@@ -111,7 +111,7 @@ class HebrewCalendarAllEventsSensor(HebrewCalendarBaseSensor):
         return len(self._events)
 
     @property
-    def extra_state_attributes(self) -> Event:
+    def extra_state_attributes(self) -> Dict[str,Any]:
         """
         כל פרטי האירועים כ-attributes.
         משמש את ה-Lovelace card וה-automations.
@@ -122,7 +122,7 @@ class HebrewCalendarAllEventsSensor(HebrewCalendarBaseSensor):
         eventsCopy.sort(key=lambda event: (event.days_until is None, event.days_until, 9999))
         
         return {
-            "events":eventsCopy ,
+            "events":[event.as_dict() for event in eventsCopy], 
             "total_count": len(eventsCopy),
             "current_hebrew_date": HebrewDateConverter.getCurrentHebrewDate(),
         }
@@ -157,9 +157,9 @@ class HebrewCalendarTodaySensor(HebrewCalendarBaseSensor):
         return len(self._today_events)
 
     @property
-    def extra_state_attributes(self) -> Dict[str, List[Event]]:
+    def extra_state_attributes(self) -> Dict[str, Any]:
         """פרטי האירועים של היום."""
-        return {"events_today": self._today_events}
+        return {"events_today": [event.as_dict() for event in self._today_events]}
 
 
 class HebrewCalendarTodayReminders(HebrewCalendarBaseSensor):
@@ -190,9 +190,9 @@ class HebrewCalendarTodayReminders(HebrewCalendarBaseSensor):
         return len(self._today_reminders)
 
     @property
-    def extra_state_attributes(self) -> Dict[str, List[Event]]:
+    def extra_state_attributes(self) -> Dict[str, Any]:
         """פרטי האירועים של היום."""
-        return {"events_today": self._today_reminders}
+        return {"events_today": [event.as_dict() for event in self._today_reminders]}
 
 
 class HebrewCalendarUpcomingSensor(HebrewCalendarBaseSensor):
@@ -227,6 +227,6 @@ class HebrewCalendarUpcomingSensor(HebrewCalendarBaseSensor):
         return len(self._upcoming_events)
 
     @property
-    def extra_state_attributes(self) -> Dict[str, List[Event]]:
+    def extra_state_attributes(self) -> Dict[str, Any]:
         """פרטי האירועים הקרובים."""
-        return {"upcoming_events": self._upcoming_events}
+        return {"upcoming_events": [event.as_dict() for event in self._upcoming_events]}

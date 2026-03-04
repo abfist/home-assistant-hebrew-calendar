@@ -120,7 +120,17 @@ class Event:
     if self.days_until in self.reminders:
       return True
     
-    
+  def as_dict(self) -> dict:
+    return {
+        "id": self.id,
+        "event_name": self.event_name,
+        "event_type": self.event_type,
+        "hebrew_day": self.hebrew_day,
+        "hebrew_month": self.hebrew_month,
+        "hebrew_year": self.hebrew_year,
+        "is_recurring": self.is_recurring,
+        "reminders": self.reminders.copy(),
+    }  
         # enriched_events = []
         # for event in self._events:
         #     year = today_hebrew["year"] if event.get(ATTR_IS_RECURRING) else event.get(ATTR_HEBREW_YEAR)
