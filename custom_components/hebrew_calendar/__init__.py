@@ -13,6 +13,7 @@ Hebrew Calendar Events Integration for Home Assistant
 
 import logging
 from datetime import date, timedelta
+from pathlib import Path
 from .Event import Event
 
 import voluptuous as vol
@@ -20,6 +21,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.event import async_track_time_change
+from homeassistant.components.frontend import add_extra_js_url
+from homeassistant.components.http import StaticPathConfig
 
 from .const import (
     DOMAIN,
@@ -92,6 +95,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     מאתחל את האחסון, רושם שירותים, ומגדיר בדיקת אירועים יומית.
     """
     _LOGGER.info("Setting up Hebrew Calendar Events integration")
+
+    # רישום קובץ ה-JS של הכרטיס כ-resource אוטומטי ב-Lovelace
+    await hass.http.async_register_static_paths([
+        StaticPathConfig(
+            url_path="/hebrew_calendar/hebrew-calendar-card.js",
+            path=Path(__file__).parent / "www" / "hebrew-calendar-card.js",
+            cache_headers=True,
+        )
+    ])
+    add_extra_js_url(hass, "/hebrew_calendar/hebrew-calendar-card.js")
 
     # אתחול מודול האחסון
     storage = HebrewCalendarStorage(hass)
