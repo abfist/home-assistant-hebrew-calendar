@@ -117,7 +117,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await _check_events_and_reminders(hass, entry)
 
     # פרסום platforms (sensor)
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "calendar"])
 
     _LOGGER.info("Hebrew Calendar Events integration setup complete")
     return True
@@ -128,7 +128,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     הסרת ה-integration.
     מנקה את הנתונים מהזיכרון.
     """
-    await hass.config_entries.async_unload_platforms(entry, ["sensor"])
+    await hass.config_entries.async_unload_platforms(entry, ["sensor", "calendar"])
     hass.data[DOMAIN].pop(entry.entry_id, None)
     return True
 
