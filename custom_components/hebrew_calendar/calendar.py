@@ -27,7 +27,7 @@ from .const import (
     ATTR_REMINDERS,
 )
 from .storage import HebrewCalendarStorage
-from .hebrew_date import HebrewDateConverter
+from .HebrewDateConverter import HebrewDateConverter
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,9 +39,8 @@ async def async_setup_entry(
 ) -> None:
     """הגדרת calendar entity."""
     storage: HebrewCalendarStorage = hass.data[DOMAIN][entry.entry_id]["storage"]
-    converter: HebrewDateConverter = hass.data[DOMAIN][entry.entry_id]["converter"]
 
-    async_add_entities([HebrewCalendarEntity(hass, entry, storage, converter)], True)
+    async_add_entities([HebrewCalendarEntity(hass, entry, storage)], True)
 
 
 class HebrewCalendarEntity(CalendarEntity):
@@ -58,13 +57,11 @@ class HebrewCalendarEntity(CalendarEntity):
         hass: HomeAssistant,
         entry: ConfigEntry,
         storage: HebrewCalendarStorage,
-        converter: HebrewDateConverter,
     ) -> None:
         """אתחול."""
         self._hass = hass
         self._entry = entry
         self._storage = storage
-        self._converter = converter
         self._attr_unique_id = f"{entry.entry_id}_calendar"
         self._attr_name = "Hebrew Calendar"
         self._next_event: Optional[CalendarEvent] = None
@@ -127,11 +124,11 @@ class HebrewCalendarEntity(CalendarEntity):
                 for event_date in gregorian_dates:
                     hebrew_day = event[ATTR_HEBREW_DAY]
                     hebrew_month = event[ATTR_HEBREW_MONTH]
-                    hebrew_year = self._converter.gregorian_to_hebrew(event_date)["year"]
+                    hebrew_year = HebrewDateConverter.gregorianToHebrew(event_date)["year"]
                     
                     description = (
                         f"סוג: {event.get(ATTR_EVENT_TYPE, 'לא צוין')}\n"
-                        f"תאריך עברי: {self._converter.hebrew_date_to_string(hebrew_day, hebrew_month, hebrew_year)}\n"
+                        f"תאריך עברי: {HebrewDateConverter.hebrewDateToString(hebrew_day, hebrew_month, hebrew_year)}\n"
                         f"{'אירוע חוזר' if event.get(ATTR_IS_RECURRING) else 'אירוע חד-פעמי'}"
                     )
                     
@@ -179,7 +176,7 @@ class HebrewCalendarEntity(CalendarEntity):
             event_year = event.get(ATTR_HEBREW_YEAR)
             if event_year:
                 try:
-                    event_date = self._converter.hebrew_to_gregorian(
+                    event_date = HebrewDateConverter.hebrewToGregorian(
                         event[ATTR_HEBREW_DAY], event[ATTR_HEBREW_MONTH], event_year
                     )
                     if start <= event_date <= end:
@@ -188,12 +185,12 @@ class HebrewCalendarEntity(CalendarEntity):
                     pass
         else:
             # אירוע חוזר - בדיקה לכל שנה בטווח
-            start_hebrew = self._converter.gregorian_to_hebrew(start)
-            end_hebrew = self._converter.gregorian_to_hebrew(end)
+            start_hebrew = HebrewDateConverter.gregorianToHebrew(start)
+            end_hebrew = HebrewDateConverter.gregorianToHebrew(end)
             
             for year in range(start_hebrew["year"], end_hebrew["year"] + 2):
                 try:
-                    event_date = self._converter.hebrew_to_gregorian(
+                    event_date = HebrewDateConverter.hebrewToGregorian(
                         event[ATTR_HEBREW_DAY], event[ATTR_HEBREW_MONTH], year
                     )
                     if start <= event_date <= end:

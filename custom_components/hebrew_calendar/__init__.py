@@ -42,7 +42,7 @@ from .const import (
     ATTR_REMINDER_DAYS,
 )
 from .storage import HebrewCalendarStorage
-from .hebrew_date import HebrewDateConverter
+from .HebrewDateConverter import HebrewDateConverter
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,7 +99,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data[DOMAIN][entry.entry_id] = {
         "storage": storage,
-        "converter": HebrewDateConverter(),
     }
 
     # רישום שירותי ניהול אירועים
@@ -196,10 +195,9 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
     - תזכורות שמתאימות להיום (N ימים לפני האירוע)
     """
     storage: HebrewCalendarStorage = hass.data[DOMAIN][entry.entry_id]["storage"]
-    converter: HebrewDateConverter = hass.data[DOMAIN][entry.entry_id]["converter"]
 
     today_gregorian = date.today()
-    today_hebrew = converter.gregorian_to_hebrew(today_gregorian)
+    today_hebrew = HebrewDateConverter.gregorianToHebrew(today_gregorian)
 
     events = await storage.async_get_events()
 
@@ -216,7 +214,7 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
             if year_to_check is None:
                 continue
 
-            event_gregorian = converter.hebrew_to_gregorian(
+            event_gregorian = HebrewDateConverter.hebrewToGregorian(
                 event_hebrew_day, event_hebrew_month, year_to_check
             )
 
