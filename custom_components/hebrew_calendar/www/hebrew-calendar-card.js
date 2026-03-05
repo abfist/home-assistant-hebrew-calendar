@@ -6,9 +6,9 @@
  */
 
 const HEBREW_MONTHS = {
-  7:'תשרי',8:'חשון',9:'כסלו',10:'טבת',11:'שבט',
-  13:'אדר ב׳',12:'אדר',1:'ניסן',2:'אייר',3:'סיון',
-  4:'תמוז',5:'אב',6:'אלול'
+  7: 'תשרי', 8: 'חשון', 9: 'כסלו', 10: 'טבת', 11: 'שבט',
+  13: 'אדר ב׳', 12: 'אדר', 1: 'ניסן', 2: 'אייר', 3: 'סיון',
+  4: 'תמוז', 5: 'אב', 6: 'אלול'
 };
 
 function getMonthName(month, year) {
@@ -21,7 +21,7 @@ function getMonthName(month, year) {
 //   return map[month] || String(month);
 // }
 
-const EVENT_TYPES = ['יום הולדת','יארצייט','יום נישואין','חג','אחר'];
+const EVENT_TYPES = ['יום הולדת', 'יארצייט', 'יום נישואין', 'חג', 'אחר'];
 const DOMAIN = 'hebrew_calendar';
 
 /* ============================================================
@@ -63,9 +63,9 @@ class HebrewCalendarDialog extends HTMLElement {
     const g = (id) => this.querySelector('#' + id);
     const name = g('hc-name')?.value?.trim();
     const type = g('hc-type')?.value;
-    const day  = parseInt(g('hc-day')?.value);
-    const month= parseInt(g('hc-month')?.value);
-    const yearV= g('hc-year')?.value;
+    const day = parseInt(g('hc-day')?.value);
+    const month = parseInt(g('hc-month')?.value);
+    const yearV = g('hc-year')?.value;
     const year = yearV ? parseInt(yearV) : null;
     const recurring = g('hc-recurring')?.checked !== false;
 
@@ -80,9 +80,11 @@ class HebrewCalendarDialog extends HTMLElement {
       return;
     }
 
-    const data = { event_name:name, event_type:type, hebrew_day:day,
-                   hebrew_month:month, is_recurring:recurring,
-                   reminders:this._reminders };
+    const data = {
+      event_name: name, event_type: type, hebrew_day: day,
+      hebrew_month: month, is_recurring: recurring,
+      reminders: this._reminders
+    };
     if (year) data.hebrew_year = year;
 
     try {
@@ -92,7 +94,7 @@ class HebrewCalendarDialog extends HTMLElement {
         await this._callService('add_event', data);
       }
       this.close();
-    } catch(e) {
+    } catch (e) {
       g('hc-error').textContent = 'שגיאה: ' + e.message;
       g('hc-error').style.display = 'block';
     }
@@ -104,7 +106,7 @@ class HebrewCalendarDialog extends HTMLElement {
     const days = parseInt(input?.value);
     if (isNaN(days) || days < 0) return;
     if (this._reminders.includes(days)) return;
-    this._reminders = [...this._reminders, days].sort((a,b)=>a-b);
+    this._reminders = [...this._reminders, days].sort((a, b) => a - b);
     input.value = '';
     this._updateRemindersList();
   }
@@ -120,7 +122,7 @@ class HebrewCalendarDialog extends HTMLElement {
     if (!this._reminders.length)
       return '<span style="color:#888;font-size:.8em">אין תזכורות</span>';
     return this._reminders.map(d =>
-      `<span class="hc-tag">${d===0?'ביום האירוע':d+' ימים לפני'}
+      `<span class="hc-tag">${d === 0 ? 'ביום האירוע' : d + ' ימים לפני'}
         <button class="hc-tag-rm" data-days="${d}">✕</button>
       </span>`
     ).join('');
@@ -139,8 +141,9 @@ class HebrewCalendarDialog extends HTMLElement {
     const ev = this._editingEvent;
     const title = ev ? `עריכת: ${ev.event_name}` : 'הוספת אירוע חדש';
 
-    const monthOptions = Object.entries(HEBREW_MONTHS)
-      .map(([key,name]) => `<option value="${key}">${name}</option>`).join('');
+    const MONTH_ORDER = [7, 8, 9, 10, 11, 12, 13, 1, 2, 3, 4, 5, 6];
+    const monthOptions = MONTH_ORDER
+      .map(key => `<option value="${key}">${HEBREW_MONTHS[key]}</option>`).join('');
     const typeOptions = EVENT_TYPES
       .map(t => `<option value="${t}">${t}</option>`).join('');
 
@@ -296,7 +299,7 @@ class HebrewCalendarCard extends HTMLElement {
   /** פתיחת דיאלוג הוספה/עריכה */
   _openDialog(editingEvent) {
     const dialog = document.createElement('hebrew-calendar-dialog');
-    dialog.open(this._hass, editingEvent || null, () => {});
+    dialog.open(this._hass, editingEvent || null, () => { });
   }
 
   /** מחיקת אירוע */
@@ -354,7 +357,7 @@ class HebrewCalendarCard extends HTMLElement {
 
     this.shadowRoot.querySelectorAll('[data-edit]').forEach(btn => {
       btn.onclick = () => {
-        try { this._openDialog(JSON.parse(btn.dataset.edit)); } catch(e) {}
+        try { this._openDialog(JSON.parse(btn.dataset.edit)); } catch (e) { }
       };
     });
 
@@ -372,22 +375,22 @@ class HebrewCalendarCard extends HTMLElement {
       </div>`;
 
     return this._events.map(ev => {
-      const rems = (ev.reminders||[]).filter(d=>d>0)
-        .map(d=>d+' ימים לפני').join(' | ');
+      const rems = (ev.reminders || []).filter(d => d > 0)
+        .map(d => d + ' ימים לפני').join(' | ');
       const du = ev.days_until;
-      const until = du===0?'🎉 היום!':du===1?'מחר':du>0&&du<=30?`בעוד ${du} ימים`:'';
-      const safeEv = JSON.stringify(ev).replace(/"/g,'&quot;');
+      const until = du === 0 ? '🎉 היום!' : du === 1 ? 'מחר' : du > 0 && du <= 30 ? `בעוד ${du} ימים` : '';
+      const safeEv = JSON.stringify(ev).replace(/"/g, '&quot;');
 
       return `
         <div class="card">
           <div>
             <div class="name">${ev.event_name}</div>
             <div class="type">${ev.event_type}</div>
-            <div class="date">📅 ${ev.hebrew_date_string||''}</div>
-            ${until?`<div class="until">${until}</div>`:''}
-            ${rems?`<div class="rems">🔔 ${rems}</div>`:''}
-            <span class="badge ${ev.is_recurring?'recurring':'once'}">
-              ${ev.is_recurring?'↻ חוזר':'· חד-פעמי'}
+            <div class="date">📅 ${ev.hebrew_date_string || ''}</div>
+            ${until ? `<div class="until">${until}</div>` : ''}
+            ${rems ? `<div class="rems">🔔 ${rems}</div>` : ''}
+            <span class="badge ${ev.is_recurring ? 'recurring' : 'once'}">
+              ${ev.is_recurring ? '↻ חוזר' : '· חד-פעמי'}
             </span>
           </div>
           <div class="actions">
