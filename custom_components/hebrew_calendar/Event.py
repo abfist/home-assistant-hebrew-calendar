@@ -104,13 +104,20 @@ class Event:
   
 
   def _getHebrewYear(self):
-    '''מחזיר את השנה לחישובים השונים מתחשב באם זה ארוע חוזר או ארוע יחיד'''
-    # fixMe: need to handle dates that passed so the next year will be handled for reminders
+    '''מחזיר את השנה לחישובים השונים מתחשב באם זה ארוע חוזר או ארוע יחיד.
+    עבור אירועים חוזרים שתאריכם כבר עבר השנה, מחזיר את השנה הבאה.'''
     if self.is_recurring or not self.hebrew_year:
-       year=HebrewDateConverter.getCurrentHebrewYear()
+      year = HebrewDateConverter.getCurrentHebrewYear()
+      # אם התאריך כבר עבר השנה, נשתמש בשנה הבאה
+      try:
+        candidate = HebrewDateConverter.hebrewToGregorian(self.hebrew_day, self.hebrew_month, year)
+        if candidate is not None and candidate < date.today():
+          year += 1
+      except Exception:
+        pass
     else:
-       year=self.hebrew_year
-    return  year
+      year = self.hebrew_year
+    return year
 
   def isToday(self):
     if self.days_until==0:
