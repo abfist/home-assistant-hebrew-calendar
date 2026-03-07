@@ -197,7 +197,7 @@ class HebrewCalendarDialog extends HTMLElement {
           <div class="hc-half">
             <div class="hc-row">
               <label>יום *</label>
-              <input id="hc-day" type="number" min="1" max="31" placeholder="1-31"
+              <input id="hc-day" type="number" min="1" max="30" placeholder="1-30"
                 value="${ev ? ev.hebrew_day : ''}">
             </div>
             <div class="hc-row">

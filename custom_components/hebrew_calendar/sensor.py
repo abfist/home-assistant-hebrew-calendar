@@ -130,6 +130,7 @@ class HebrewCalendarAllEventsSensor(HebrewCalendarBaseSensor):
         return {
             "events":[event.as_dict() for event in eventsCopy], 
             "total_count": len(eventsCopy),
+            "has_events": len(eventsCopy) > 0,
             "current_hebrew_date": HebrewDateConverter.getCurrentHebrewDateString(),
             "summary": summary,
         }
@@ -174,6 +175,7 @@ class HebrewCalendarTodaySensor(HebrewCalendarBaseSensor):
 
         return {"events_today": [event.as_dict() for event in self._today_events],
                 "total_count": len(self._today_events),
+                "has_events": len(self._today_events) > 0,
                 "current_hebrew_date": HebrewDateConverter.getCurrentHebrewDateString(),
                 "summary": summary,
                 }
@@ -217,6 +219,7 @@ class HebrewCalendarTodayReminders(HebrewCalendarBaseSensor):
 
         return {"events_today": [event.as_dict() for event in self._today_reminders],
                 "total_count": len(self._today_reminders),
+                "has_events": len(self._today_reminders) > 0,
                 "current_hebrew_date": HebrewDateConverter.getCurrentHebrewDateString(),
                 "summary": summary,
                 }
@@ -268,6 +271,7 @@ class HebrewCalendarUpcomingSensor(HebrewCalendarBaseSensor):
 
         return {"upcoming_events": [event.as_dict() for event in self._upcoming_events],
                 "total_count": len(self._upcoming_events),
+                "has_events": len(self._upcoming_events) > 0,
                 "closest_event": self._upcoming_events[0] if 0<len(self._upcoming_events) else None,
                 "days until next event":self._upcoming_events[0].days_until if 0<len(self._upcoming_events) else None,
                 "current_hebrew_date": HebrewDateConverter.getCurrentHebrewDateString(),

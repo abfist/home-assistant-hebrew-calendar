@@ -89,9 +89,25 @@ gregorian_date: "2024-10-17"
 days_until: 12
 ```
 
-The `sensor.hebrew_calendar_events` sensor also includes:
-- `total_count` — total number of stored events
-- `current_hebrew_date` — today's Hebrew date as a readable string
+All four sensors share the following top-level attributes:
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `total_count` | `int` | Number of events in this sensor |
+| `has_events` | `bool` | `true` if `total_count > 0`, `false` otherwise |
+| `current_hebrew_date` | `string` | Today's Hebrew date as a readable string |
+| `summary` | `string` | Human-readable text summary of the events |
+
+The `has_events` boolean is especially useful in automation conditions and Lovelace visibility rules — no need to compare numeric values.
+
+Additional attributes per sensor:
+
+| Sensor | Events attribute key | Extra attributes |
+|--------|----------------------|-----------------|
+| `sensor.hebrew_calendar_events` | `events` | — |
+| `sensor.hebrew_calendar_today` | `events_today` | — |
+| `sensor.hebrew_calendar_reminders_today` | `events_today` | — |
+| `sensor.hebrew_calendar_upcoming` | `upcoming_events` | `closest_event`, `days until next event` |
 
 ---
 
@@ -219,6 +235,33 @@ event_hebrew_date: "15/1/5785"
 event_gregorian_date: "2024-10-17"
 reminder_days: 7
 ```
+
+---
+
+## Automation Examples
+
+### Notify when reminders are due today
+
+This automation runs at midnight, checks whether `sensor.hebrew_calendar_reminders_today` has any events (using the `has_events` attribute), and if so sends a notification listing each event name and how many days away it is.
+
+```yaml
+alias: Hebrew Calendar - Daily Reminder Notification
+description: Sends a notification each morning for any Hebrew calendar reminders due today.
+trigger:
+  - platform: time
+    at: "07:00:00"
+condition:
+  - condition: template
+    value_template: "{{ state_attr('sensor.hebrew_calendar_reminders_today', 'has_events') }}"
+action:
+  - service: notify.notify
+    data:
+      title: "📅 Hebrew Calendar Reminders"
+      message: "{{ state_attr('sensor.hebrew_calendar_reminders_today', 'summary') }}"
+mode: single
+```
+
+> **Tip:** Replace `notify.notify` with your preferred notification service, e.g. `notify.mobile_app_my_phone` or `notify.telegram`.
 
 ---
 

@@ -34,7 +34,7 @@ class HebrewDateConverter:
         המרת תאריך עברי לתאריך גרגוריאני.
         
         Args:
-            day: יום בחודש העברי (1-31)
+            day: יום בחודש העברי (1-30)
             month: חודש עברי (1-13)
             year: שנה עברית
             
@@ -94,7 +94,7 @@ class HebrewDateConverter:
         בודק אם תאריך עברי נתון חוקי.
         
         Args:
-            day: יום (1-31)
+            day: יום (1-30)
             month: חודש (1-13)
             year: שנה
             

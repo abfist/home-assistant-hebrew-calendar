@@ -51,8 +51,8 @@ class HebrewCalendarStorage:
         year = event_data.get("hebrew_year")
         is_recurring = event_data.get("is_recurring", True)
 
-        if not (1 <= day <= 31):
-            return f"יום לא חוקי: {day}. הטווח החוקי הוא 1–31."
+        if not (1 <= day <= 30):
+            return f"יום לא חוקי: {day}. הטווח החוקי הוא 1–30."
 
         if not (1 <= month <= 13):
             return f"חודש לא חוקי: {month}. הטווח החוקי הוא 1–13."
@@ -74,15 +74,15 @@ class HebrewCalendarStorage:
                     f"שנה לאירוע חוזר כדי לאפשר התאמה אוטומטית, או בחר יום עד {last_day}."
                 )
 
-        # לאירועים חוזרים: בדוק שהיום אינו מעל 31 
-        if day > 31:
-            return f"יום {day} אינו חוקי. בלוח השנה העברי אין חודש עם יותר מ-31 ימים."
+        # לאירועים חוזרים: בדוק שהיום אינו מעל 30 
+        if day > 30:
+            return f"יום {day} אינו חוקי. בלוח השנה העברי אין חודש עם יותר מ-30 ימים."
 
         # אזהרה (לא שגיאה) לאירועים חוזרים עם יום 30/31 — ייתכן שלא יחול בכל שנה
         # לא מחזירים שגיאה, אלא רושמים בלוג
-        if is_recurring and day >= 30:
+        if is_recurring and day == 30:
             _LOGGER.info(
-                "Event with day 30||31 in month %d is recurring — in years where the month has only 29 days, "
+                "Event with day 30 in month %d is recurring — in years where the month has only 29 days, "
                 "the event will be observed on the 29th (last day of month).",
                 month,
             )
