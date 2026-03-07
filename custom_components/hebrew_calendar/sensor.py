@@ -159,7 +159,10 @@ class HebrewCalendarTodaySensor(HebrewCalendarBaseSensor):
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
         """פרטי האירועים של היום."""
-        return {"events_today": [event.as_dict() for event in self._today_events]}
+        return {"events_today": [event.as_dict() for event in self._today_events],
+                "total_count": len(self._today_events),
+                "current_hebrew_date": HebrewDateConverter.getCurrentHebrewDateString()
+                }
 
 
 class HebrewCalendarTodayReminders(HebrewCalendarBaseSensor):
@@ -192,7 +195,10 @@ class HebrewCalendarTodayReminders(HebrewCalendarBaseSensor):
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
         """פרטי האירועים של היום."""
-        return {"events_today": [event.as_dict() for event in self._today_reminders]}
+        return {"events_today": [event.as_dict() for event in self._today_reminders],
+                "total_count": len(self._today_reminders),
+                "current_hebrew_date": HebrewDateConverter.getCurrentHebrewDateString()
+                }
 
 
 class HebrewCalendarUpcomingSensor(HebrewCalendarBaseSensor):
@@ -229,4 +235,9 @@ class HebrewCalendarUpcomingSensor(HebrewCalendarBaseSensor):
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
         """פרטי האירועים הקרובים."""
-        return {"upcoming_events": [event.as_dict() for event in self._upcoming_events]}
+        return {"upcoming_events": [event.as_dict() for event in self._upcoming_events],
+                "total_count": len(self._upcoming_events),
+                "closest_event": self._upcoming_events[0] if 0<len(self._upcoming_events) else None,
+                "days until next event":self._upcoming_events[0].days_until if 0<len(self._upcoming_events) else None,
+                "current_hebrew_date": HebrewDateConverter.getCurrentHebrewDateString()
+                }
