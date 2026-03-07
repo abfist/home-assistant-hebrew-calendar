@@ -122,7 +122,7 @@ class HebrewCalendarAllEventsSensor(HebrewCalendarBaseSensor):
         eventsCopy.sort(key=lambda event: (event.days_until is None, event.days_until, 9999))
         
         if eventsCopy:
-            names = "\n".join(f"{event.name} ({event.event_type})" for event in eventsCopy)
+            names = "\n".join(f"{event.event_name} ({event.event_type})" for event in eventsCopy)
             summary = f"כל האירועים:\n{names}"
         else:
             summary = "אין אירועים מוגדרים"
@@ -167,7 +167,7 @@ class HebrewCalendarTodaySensor(HebrewCalendarBaseSensor):
     def extra_state_attributes(self) -> Dict[str, Any]:
         """פרטי האירועים של היום."""
         if self._today_events:
-            names = "\n".join(f"{event.name} ({event.event_type})" for event in self._today_events)
+            names = "\n".join(f"{event.event_name} ({event.event_type})" for event in self._today_events)
             summary = f"האירועים היום:\n{names}"
         else:
             summary = "אין אירועים היום"
@@ -210,7 +210,7 @@ class HebrewCalendarTodayReminders(HebrewCalendarBaseSensor):
     def extra_state_attributes(self) -> Dict[str, Any]:
         """פרטי האירועים של היום."""
         if self._today_reminders:
-            names = "\n".join(f"{event.name} ({event.event_type})" for event in self._today_reminders)
+            names = "\n".join(f"{event.event_name} ({event.event_type})" for event in self._today_reminders)
             summary = f"תזכורות להיום:\n{names}"
         else:
             summary = "אין תזכורות להיום"
@@ -258,8 +258,8 @@ class HebrewCalendarUpcomingSensor(HebrewCalendarBaseSensor):
         """פרטי האירועים הקרובים."""
         if self._upcoming_events:
             names = "\n".join(
-                f"{event.name} ({event.event_type}) - בעוד {event.days_until} ימים" if event.days_until and event.days_until > 0
-                else f"{event.name} ({event.event_type}) - היום"
+                f"{event.event_name} ({event.event_type}) - בעוד {event.days_until} ימים" if event.days_until and event.days_until > 0
+                else f"{event.event_name} ({event.event_type}) - היום"
                 for event in self._upcoming_events
             )
             summary = f"אירועים קרובים:\n{names}"
