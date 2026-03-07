@@ -227,8 +227,15 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
             if year_to_check is None:
                 continue
 
+            # בדיקה שהחודש קיים בשנה זו (למשל אדר ב׳)
+            if not HebrewDateConverter.isValidHebrewMonthInYear(event_hebrew_month, year_to_check):
+                continue
+
+            # clamping יום — אם החודש קצר מהיום המוגדר, נשתמש ביום האחרון
+            actual_day = HebrewDateConverter.getValidDay(event_hebrew_day, event_hebrew_month, year_to_check)
+
             event_gregorian = HebrewDateConverter.hebrewToGregorian(
-                event_hebrew_day, event_hebrew_month, year_to_check
+                actual_day, event_hebrew_month, year_to_check
             )
 
             # בדיקה אם היום הוא יום האירוע
@@ -240,7 +247,7 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
                         "event_id": event.id,
                         "event_name": event.event_name,
                         "event_type": event.event_type,
-                        "hebrew_date": f"{event_hebrew_day}/{event_hebrew_month}/{year_to_check}",
+                        "hebrew_date": f"{actual_day}/{event_hebrew_month}/{year_to_check}",
                         "gregorian_date": str(today_gregorian),
                         "is_recurring": is_recurring,
                     },
@@ -264,7 +271,7 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
                             "event_name": event.event_name,
                             "event_type": event.event_type,
                             "days_until_event": reminder_days,
-                            "event_hebrew_date": f"{event_hebrew_day}/{event_hebrew_month}/{year_to_check}",
+                            "event_hebrew_date": f"{actual_day}/{event_hebrew_month}/{year_to_check}",
                             "event_gregorian_date": str(event_gregorian),
                             "reminder_days": reminder_days,
                         },

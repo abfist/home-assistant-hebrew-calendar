@@ -62,12 +62,22 @@ class Event:
    
   def getGregorianDate(self):
     try:
-   
-      return HebrewDateConverter.hebrewToGregorian(
-          self.hebrew_day,
-          self.hebrew_month,
-          self._getHebrewYear(),
-      )
+      year = self._getHebrewYear()
+      # אם החודש לא קיים בשנה זו (למשל אדר ב׳ בשנה רגילה), דלג
+      if not HebrewDateConverter.isValidHebrewMonthInYear(self.hebrew_month, year):
+          _LOGGER.debug(
+              "Month %d does not exist in Hebrew year %d for event %s, skipping",
+              self.hebrew_month, year, self.id,
+          )
+          return None
+      # אם היום גדול ממספר ימי החודש, השתמש ביום האחרון
+      actual_day = HebrewDateConverter.getValidDay(self.hebrew_day, self.hebrew_month, year)
+      if actual_day != self.hebrew_day:
+          _LOGGER.debug(
+              "Day %d clamped to %d for month %d year %d (event %s)",
+              self.hebrew_day, actual_day, self.hebrew_month, year, self.id,
+          )
+      return HebrewDateConverter.hebrewToGregorian(actual_day, self.hebrew_month, year)
     except Exception as e:
         _LOGGER.debug("Could not get gregorian date for event %s: %s", self.id, e)
         return None
@@ -77,13 +87,11 @@ class Event:
       if self.hebrew_year is None:
         year = HebrewDateConverter.getCurrentHebrewYear()
       else:
-        year=self.hebrew_year
-            
-      return HebrewDateConverter.hebrewToGregorian(
-          self.hebrew_day,
-          self.hebrew_month,
-          year
-      )
+        year = self.hebrew_year
+      if not HebrewDateConverter.isValidHebrewMonthInYear(self.hebrew_month, year):
+          return None
+      actual_day = HebrewDateConverter.getValidDay(self.hebrew_day, self.hebrew_month, year)
+      return HebrewDateConverter.hebrewToGregorian(actual_day, self.hebrew_month, year)
     except Exception as e:
         _LOGGER.debug("Could not get gregorian date for event %s: %s", self.id, e)
         return None
@@ -105,14 +113,28 @@ class Event:
 
   def _getHebrewYear(self):
     '''מחזיר את השנה לחישובים השונים מתחשב באם זה ארוע חוזר או ארוע יחיד.
-    עבור אירועים חוזרים שתאריכם כבר עבר השנה, מחזיר את השנה הבאה.'''
+    עבור אירועים חוזרים שתאריכם כבר עבר השנה, מחזיר את השנה הבאה.
+    אם החודש לא קיים בשנה הנוכחית (למשל אדר ב׳ בשנה רגילה), מחפש את השנה הבאה שבה קיים.'''
     if self.is_recurring or not self.hebrew_year:
       year = HebrewDateConverter.getCurrentHebrewYear()
-      # אם התאריך כבר עבר השנה, נשתמש בשנה הבאה
+      # חיפוש השנה הקרובה שבה החודש קיים (רלוונטי לאדר ב׳)
+      for _ in range(20):  # מקסימום 20 שנה קדימה
+          if HebrewDateConverter.isValidHebrewMonthInYear(self.hebrew_month, year):
+              break
+          year += 1
+      else:
+          return year  # לא נמצא — החזר כפי שהוא
+      # אם התאריך כבר עבר השנה, נשתמש בשנה הבאה שבה החודש קיים
       try:
-        candidate = HebrewDateConverter.hebrewToGregorian(self.hebrew_day, self.hebrew_month, year)
+        actual_day = HebrewDateConverter.getValidDay(self.hebrew_day, self.hebrew_month, year)
+        candidate = HebrewDateConverter.hebrewToGregorian(actual_day, self.hebrew_month, year)
         if candidate is not None and candidate < date.today():
           year += 1
+          # ודא שהחודש קיים גם בשנה הבאה
+          for _ in range(20):
+              if HebrewDateConverter.isValidHebrewMonthInYear(self.hebrew_month, year):
+                  break
+              year += 1
       except Exception:
         pass
     else:
@@ -128,11 +150,21 @@ class Event:
       return True
     
   def as_dict(self) -> dict:
+    year = self._getHebrewYear()
+    # חישוב היום בפועל (לאחר clamping אם צריך)
+    actual_day = self.hebrew_day
+    date_note = None
+    if HebrewDateConverter.isValidHebrewMonthInYear(self.hebrew_month, year):
+        clamped = HebrewDateConverter.getValidDay(self.hebrew_day, self.hebrew_month, year)
+        if clamped != self.hebrew_day:
+            actual_day = clamped
+            last_day_name = HebrewDateConverter.hebrewDateToString(clamped, self.hebrew_month, year)
+            date_note = f"יום {self.hebrew_day} אינו קיים בחודש זה בשנה זו — מוצג כ-{last_day_name}"
     return {
         "id": self.id,
         "event_name": self.event_name,
         "event_type": self.event_type,
-        "hebrew_day": self.hebrew_day,
+        "hebrew_day": actual_day,
         "hebrew_month": self.hebrew_month,
         "hebrew_year": self.hebrew_year,
         "is_recurring": self.is_recurring,
@@ -140,6 +172,7 @@ class Event:
         "hebrew_date_string": self.hebrew_date_string,
         "gregorian_date": self.gregorian_date,
         "days_until": self.days_until,
+        "date_note": date_note,  # הערה אם היום נוצר בצורה מעוגלת
     }  
         # enriched_events = []
         # for event in self._events:

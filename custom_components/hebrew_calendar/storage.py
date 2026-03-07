@@ -16,6 +16,8 @@ from homeassistant.helpers.storage import Store
 
 from .const import STORAGE_KEY, STORAGE_VERSION, ATTR_REMINDERS
 
+from .HebrewDateConverter import HebrewDateConverter
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -35,6 +37,57 @@ class HebrewCalendarStorage:
         self._hass = hass
         self._store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
         self._events: Dict[str, Event] = {}
+
+    @staticmethod
+    def validate_event_data(event_data: Dict[str, Any]) -> Optional[str]:
+        """
+        בדיקת תקינות נתוני אירוע לפני שמירה.
+        
+        Returns:
+            מחרוזת שגיאה אם הנתונים לא תקינים, None אם תקין.
+        """
+        day = event_data.get("hebrew_day")
+        month = event_data.get("hebrew_month")
+        year = event_data.get("hebrew_year")
+        is_recurring = event_data.get("is_recurring", True)
+
+        if not (1 <= day <= 31):
+            return f"יום לא חוקי: {day}. הטווח החוקי הוא 1–31."
+
+        if not (1 <= month <= 13):
+            return f"חודש לא חוקי: {month}. הטווח החוקי הוא 1–13."
+
+        # לאירועים חד-פעמיים עם שנה: נבדוק שהתאריך קיים בפועל
+        if not is_recurring and year:
+            if not HebrewDateConverter.isValidHebrewMonthInYear(month, year):
+                from .const import HEBREW_MONTHS
+                month_name = HEBREW_MONTHS.get(month, str(month))
+                return (
+                    f"חודש {month_name} (חודש {month}) אינו קיים בשנה העברית {year}. "
+                    f"ייתכן שניסית להוסיף אדר ב׳ בשנה שאינה שנת עיבור."
+                )
+            last_day = HebrewDateConverter.getLastDayOfHebrewMonth(month, year)
+            if day > last_day:
+                return (
+                    f"יום {day} אינו קיים בחודש {month} בשנה {year}. "
+                    f"החודש מכיל {last_day} ימים בלבד. "
+                    f"שנה לאירוע חוזר כדי לאפשר התאמה אוטומטית, או בחר יום עד {last_day}."
+                )
+
+        # לאירועים חוזרים: בדוק שהיום אינו מעל 31 
+        if day > 31:
+            return f"יום {day} אינו חוקי. בלוח השנה העברי אין חודש עם יותר מ-31 ימים."
+
+        # אזהרה (לא שגיאה) לאירועים חוזרים עם יום 30/31 — ייתכן שלא יחול בכל שנה
+        # לא מחזירים שגיאה, אלא רושמים בלוג
+        if is_recurring and day >= 30:
+            _LOGGER.info(
+                "Event with day 30||31 in month %d is recurring — in years where the month has only 29 days, "
+                "the event will be observed on the 29th (last day of month).",
+                month,
+            )
+
+        return None  # תקין
 
     async def async_load(self) -> None:
         """
@@ -90,7 +143,11 @@ class HebrewCalendarStorage:
             מזהה האירוע החדש
         """
         event_id = str(uuid.uuid4())
-        event_data["id"]=event_id
+        validation_error = self.validate_event_data(event_data)
+        if validation_error:
+            _LOGGER.error("Invalid event data: %s", validation_error)
+            raise ValueError(validation_error)
+        event_data["id"] = event_id
         event_data[ATTR_REMINDERS]=list(set(event_data.get(ATTR_REMINDERS, [])))  # הסרת כפילויות
         self._events[event_id] = Event.fromDict(event_data)
         await self.async_save()
@@ -111,6 +168,11 @@ class HebrewCalendarStorage:
             _LOGGER.warning("Tried to edit non-existent event: %s", event_id)
             return False
         
+        validation_error = self.validate_event_data(event_data)
+        if validation_error:
+            _LOGGER.error("Invalid event data on edit: %s", validation_error)
+            raise ValueError(validation_error)
+
         # שמירת ה-ID המקורי
         existing = self._events[event_id]
         event_data["id"] = event_id

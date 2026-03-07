@@ -69,6 +69,80 @@ class HebrewDateConverter:
             _LOGGER.error("pyluach conversion error: %s", e)
 
     @staticmethod
+    def getLastDayOfHebrewMonth(month: int, year: int) -> int:
+        """
+        מחזיר את מספר הימים בחודש עברי נתון.
+        משתמש ב-pyluach לחישוב מדויק (מתחשב בשנות עיבור וסוג השנה).
+        
+        Args:
+            month: חודש עברי (1-13)
+            year: שנה עברית
+            
+        Returns:
+            מספר הימים בחודש (29 או 30)
+        """
+        try:
+            h = HebrewDate(year, month, 1)
+            return h.month_length()
+        except Exception as e:
+            _LOGGER.error("Could not get month length for %d/%d: %s", month, year, e)
+            return 29  # ברירת מחדל בטוחה
+
+    @staticmethod
+    def isValidHebrewDate(day: int, month: int, year: int) -> bool:
+        """
+        בודק אם תאריך עברי נתון חוקי.
+        
+        Args:
+            day: יום (1-31)
+            month: חודש (1-13)
+            year: שנה
+            
+        Returns:
+            True אם התאריך חוקי
+        """
+        try:
+            HebrewDate(year, month, day)
+            return True
+        except Exception:
+            return False
+
+    @staticmethod
+    def isValidHebrewMonthInYear(month: int, year: int) -> bool:
+        """
+        בודק אם חודש עברי קיים בשנה נתונה.
+        חודש 13 (אדר ב׳) קיים רק בשנות עיבור.
+        
+        Args:
+            month: חודש (1-13)
+            year: שנה
+            
+        Returns:
+            True אם החודש קיים בשנה זו
+        """
+        try:
+            HebrewDate(year, month, 1)
+            return True
+        except Exception:
+            return False
+
+    @staticmethod
+    def getValidDay(day: int, month: int, year: int) -> int:
+        """
+        מחזיר יום חוקי בחודש — אם היום גדול ממספר ימי החודש, מחזיר את היום האחרון.
+        
+        Args:
+            day: יום מבוקש
+            month: חודש עברי
+            year: שנה עברית
+            
+        Returns:
+            יום חוקי (מקסימום: מספר ימי החודש)
+        """
+        last_day = HebrewDateConverter.getLastDayOfHebrewMonth(month, year)
+        return min(day, last_day)
+
+    @staticmethod
     def getCurrentHebrewYear() -> int:
         """מחזיר את השנה העברית הנוכחית."""
         today = date.today()

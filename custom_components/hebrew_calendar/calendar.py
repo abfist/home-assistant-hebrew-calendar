@@ -176,11 +176,19 @@ class HebrewCalendarEntity(CalendarEntity):
             event_year = event.get(ATTR_HEBREW_YEAR)
             if event_year:
                 try:
-                    event_date = HebrewDateConverter.hebrewToGregorian(
-                        event[ATTR_HEBREW_DAY], event[ATTR_HEBREW_MONTH], event_year
-                    )
-                    if start <= event_date <= end:
-                        dates.append(event_date)
+                    if not HebrewDateConverter.isValidHebrewMonthInYear(
+                        event[ATTR_HEBREW_MONTH], event_year
+                    ):
+                        pass
+                    else:
+                        actual_day = HebrewDateConverter.getValidDay(
+                            event[ATTR_HEBREW_DAY], event[ATTR_HEBREW_MONTH], event_year
+                        )
+                        event_date = HebrewDateConverter.hebrewToGregorian(
+                            actual_day, event[ATTR_HEBREW_MONTH], event_year
+                        )
+                        if start <= event_date <= end:
+                            dates.append(event_date)
                 except Exception:
                     pass
         else:
@@ -190,8 +198,16 @@ class HebrewCalendarEntity(CalendarEntity):
             
             for year in range(start_hebrew["year"], end_hebrew["year"] + 2):
                 try:
-                    event_date = HebrewDateConverter.hebrewToGregorian(
+                    # דלג על שנים שבהן החודש לא קיים (למשל אדר ב׳ בשנה רגילה)
+                    if not HebrewDateConverter.isValidHebrewMonthInYear(
+                        event[ATTR_HEBREW_MONTH], year
+                    ):
+                        continue
+                    actual_day = HebrewDateConverter.getValidDay(
                         event[ATTR_HEBREW_DAY], event[ATTR_HEBREW_MONTH], year
+                    )
+                    event_date = HebrewDateConverter.hebrewToGregorian(
+                        actual_day, event[ATTR_HEBREW_MONTH], year
                     )
                     if start <= event_date <= end:
                         dates.append(event_date)
