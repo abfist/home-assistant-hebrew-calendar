@@ -81,29 +81,21 @@ async def _async_register_lovelace_resource(hass, url: str) -> None:
     """רושם את קובץ ה-JS ישירות ב-Lovelace resources storage."""
     try:
         ll_data = hass.data.get("lovelace")
-        _LOGGER.warning("HEBREW_CAL DEBUG: lovelace data type=%s keys=%s", type(ll_data), dir(ll_data) if ll_data else None)
         if ll_data is None:
             raise RuntimeError("lovelace not in hass.data")
-
         resources = getattr(ll_data, "resources", None)
-        if isinstance(ll_data, dict):
-            resources = ll_data.get("resources", resources)
-        _LOGGER.warning("HEBREW_CAL DEBUG: resources=%s type=%s", resources, type(resources))
         if resources is None:
             raise RuntimeError("resources not found")
-
         await resources.async_load()
         existing = [r["url"] for r in resources.async_items()]
-        _LOGGER.warning("HEBREW_CAL DEBUG: existing resources=%s", existing)
         if not any(url in u for u in existing):
             await resources.async_create_item({"res_type": "module", "url": url})
-            _LOGGER.warning("HEBREW_CAL DEBUG: resource CREATED OK: %s", url)
+            _LOGGER.info("Registered Lovelace resource: %s", url)
         else:
-            _LOGGER.warning("HEBREW_CAL DEBUG: resource already exists: %s", url)
+            _LOGGER.debug("Lovelace resource already registered: %s", url)
     except Exception as e:
-        _LOGGER.warning("HEBREW_CAL DEBUG: registration FAILED: %s", e)
-        _LOGGER.warning("Add manually in HA: Settings -> Dashboards -> Resources -> %s -> type: module", url)
-        _LOGGER.warning("Please add manually: Settings -> Dashboards -> Resources -> %s", url)
+        _LOGGER.warning("Could not register Lovelace resource: %s", e)
+        _LOGGER.warning("Add manually: Settings -> Dashboards -> Resources -> %s (type: module)", url)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
