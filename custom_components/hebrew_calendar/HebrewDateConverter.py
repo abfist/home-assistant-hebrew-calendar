@@ -82,8 +82,12 @@ class HebrewDateConverter:
             מספר הימים בחודש (29 או 30)
         """
         try:
-            h = HebrewDate(year, month, 1)
-            return h.month_length()
+            # Try day 30 first; if invalid, the month has only 29 days
+            try:
+                HebrewDate(year, month, 30)
+                return 30
+            except Exception:
+                return 29
         except Exception as e:
             _LOGGER.error("Could not get month length for %d/%d: %s", month, year, e)
             return 29  # ברירת מחדל בטוחה
