@@ -21,7 +21,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.event import async_track_time_change
-from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 
 from .const import (
@@ -72,11 +71,28 @@ ADD_REMINDER_SCHEMA = vol.Schema({
     vol.Required(ATTR_EVENT_ID): cv.string,
     vol.Required(ATTR_REMINDER_DAYS): vol.All(int, vol.Range(min=0)),
 })
-
 REMOVE_REMINDER_SCHEMA = vol.Schema({
     vol.Required(ATTR_EVENT_ID): cv.string,
     vol.Required(ATTR_REMINDER_DAYS): vol.All(int, vol.Range(min=0)),
 })
+
+
+async def _async_register_lovelace_resource(hass, url: str) -> None:
+    """רושם את קובץ ה-JS ישירות ב-Lovelace resources storage."""
+    from homeassistant.components.lovelace import _async_get_component
+    try:
+        lovelace = _async_get_component(hass)
+        resources = lovelace.resources
+        await resources.async_load()
+        existing = [r["url"] for r in resources.async_items()]
+        if not any(url in u for u in existing):
+            await resources.async_create_item({"res_type": "module", "url": url})
+            _LOGGER.info("Registered Lovelace resource: %s", url)
+        else:
+            _LOGGER.debug("Lovelace resource already registered: %s", url)
+    except Exception as e:
+        _LOGGER.warning("Could not register Lovelace resource automatically: %s", e)
+        _LOGGER.warning("Please add manually: Settings -> Dashboards -> Resources -> %s", url)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -101,18 +117,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         StaticPathConfig(
             url_path="/hebrew_calendar/hebrew-calendar-card.js",
             path=Path(__file__).parent / "www" / "hebrew-calendar-card.js",
-            cache_headers=False,  # ✅ תוקן: היה True
+            cache_headers=False,
         )
     ])
-    add_extra_js_url(hass, "/hebrew_calendar/hebrew-calendar-card.js?v=1")  # ✅ תוקן: נוסף ?v=1
 
-    # אתחול מודול האחסון
+    # רישום ישיר ב-Lovelace resources (הדרך האמינה ביותר)
+    await _async_register_lovelace_resource(
+        hass, "/hebrew_calendar/www/hebrew-calendar-card.js"
+        )
+
     storage = HebrewCalendarStorage(hass)
     await storage.async_load()
 
-    hass.data[DOMAIN][entry.entry_id] = {
-        "storage": storage,
-    }
+    hass.data[DOMAIN][entry.entry_id] = {"storage": storage}
 
     # רישום שירותי ניהול אירועים
     _register_services(hass, entry)
@@ -121,9 +138,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async_track_time_change(
         hass,
         lambda now: hass.async_create_task(_check_events_and_reminders(hass, entry)),
-        hour=0,
-        minute=0,
-        second=0,
+        hour=0, minute=0, second=0,
     )
 
     # בדיקה ראשונית בהפעלה
