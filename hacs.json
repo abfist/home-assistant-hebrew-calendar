@@ -1,7 +1,5 @@
 {
   "name": "Hebrew Calendar Events",
   "render_readme": true,
-  "domains": ["hebrew_calendar"],
-  "homeassistant": "2023.1.0",
-  "version": "1.0.0"
+  "homeassistant": "2023.1.0"
 }
