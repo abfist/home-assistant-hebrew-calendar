@@ -79,10 +79,14 @@ REMOVE_REMINDER_SCHEMA = vol.Schema({
 
 async def _async_register_lovelace_resource(hass, url: str) -> None:
     """רושם את קובץ ה-JS ישירות ב-Lovelace resources storage."""
-    from homeassistant.components.lovelace import _async_get_component
     try:
-        lovelace = _async_get_component(hass)
-        resources = lovelace.resources
+        from homeassistant.components.lovelace.resources import ResourceStorageCollection
+        ll_component = hass.data.get("lovelace")
+        if ll_component is None:
+            raise RuntimeError("lovelace component not loaded yet")
+        resources = ll_component.get("resources") or ll_component.resources
+        if resources is None:
+            raise RuntimeError("lovelace resources not available")
         await resources.async_load()
         existing = [r["url"] for r in resources.async_items()]
         if not any(url in u for u in existing):
@@ -92,7 +96,7 @@ async def _async_register_lovelace_resource(hass, url: str) -> None:
             _LOGGER.debug("Lovelace resource already registered: %s", url)
     except Exception as e:
         _LOGGER.warning("Could not register Lovelace resource automatically: %s", e)
-        _LOGGER.warning("Please add manually: Settings -> Dashboards -> Resources -> %s", url)
+        _LOGGER.warning("Add manually: Settings -> Dashboards -> Resources -> %s (type: module)", url)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -123,7 +127,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # רישום ישיר ב-Lovelace resources (הדרך האמינה ביותר)
     await _async_register_lovelace_resource(
-        hass, "/hebrew_calendar/www/hebrew-calendar-card.js"
+        hass, "/hebrew_calendar/hebrew-calendar-card.js"
         )
 
     storage = HebrewCalendarStorage(hass)
