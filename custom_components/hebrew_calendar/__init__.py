@@ -101,10 +101,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         StaticPathConfig(
             url_path="/hebrew_calendar/hebrew-calendar-card.js",
             path=Path(__file__).parent / "www" / "hebrew-calendar-card.js",
-            cache_headers=True,
+            cache_headers=False,  # ✅ תוקן: היה True
         )
     ])
-    add_extra_js_url(hass, "/hebrew_calendar/hebrew-calendar-card.js")
+    add_extra_js_url(hass, "/hebrew_calendar/hebrew-calendar-card.js?v=1")  # ✅ תוקן: נוסף ?v=1
 
     # אתחול מודול האחסון
     storage = HebrewCalendarStorage(hass)
@@ -220,25 +220,20 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
         is_recurring = event.is_recurring
         event_hebrew_year = event.hebrew_year
 
-        # המרת תאריך האירוע לגרגוריאני
         try:
-            # עבור אירועים חוזרים, נשתמש בשנה העברית הנוכחית
             year_to_check = today_hebrew["year"] if is_recurring else event_hebrew_year
             if year_to_check is None:
                 continue
 
-            # בדיקה שהחודש קיים בשנה זו (למשל אדר ב׳)
             if not HebrewDateConverter.isValidHebrewMonthInYear(event_hebrew_month, year_to_check):
                 continue
 
-            # clamping יום — אם החודש קצר מהיום המוגדר, נשתמש ביום האחרון
             actual_day = HebrewDateConverter.getValidDay(event_hebrew_day, event_hebrew_month, year_to_check)
 
             event_gregorian = HebrewDateConverter.hebrewToGregorian(
                 actual_day, event_hebrew_month, year_to_check
             )
 
-            # בדיקה אם היום הוא יום האירוע
             if event_gregorian == today_gregorian:
                 _LOGGER.info("Firing event trigger for: %s", event.event_name or "unknown")
                 hass.bus.async_fire(
@@ -253,10 +248,9 @@ async def _check_events_and_reminders(hass: HomeAssistant, entry: ConfigEntry) -
                     },
                 )
 
-            # בדיקת תזכורות
             for reminder_days in event.reminders:
                 if reminder_days == 0:
-                    continue  # 0 = ללא תזכורת
+                    continue
                 reminder_date = event_gregorian - timedelta(days=reminder_days)
                 if reminder_date == today_gregorian:
                     _LOGGER.info(
