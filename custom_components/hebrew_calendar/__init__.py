@@ -18,7 +18,7 @@ from .Event import Event
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.components.http import StaticPathConfig
@@ -138,9 +138,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _register_services(hass, entry)
 
     # הגדרת בדיקה יומית של אירועים ותזכורות (מתבצעת בחצות)
+    @callback
+    def _midnight_check(now) -> None:
+        """Callback (event-loop safe) שמתזמן את הבדיקה היומית."""
+        hass.async_create_task(_check_events_and_reminders(hass, entry))
+
     async_track_time_change(
         hass,
-        lambda now: hass.async_create_task(_check_events_and_reminders(hass, entry)),
+        _midnight_check,
         hour=0, minute=0, second=0,
     )
 
