@@ -289,6 +289,8 @@ class HebrewCalendarCard extends HTMLElement {
     this._hass = null;
     this._config = null;
     this._events = [];
+    this._eventsJson = null;
+    this._currentDate = null;
   }
 
   setConfig(config) {
@@ -300,9 +302,16 @@ class HebrewCalendarCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     const stateObj = hass.states[this._config.entity];
-    if (stateObj?.attributes?.events) {
-      this._events = stateObj.attributes.events;
-    }
+    const newEvents = stateObj?.attributes?.events || [];
+    const newDate = stateObj?.attributes?.current_hebrew_date || '';
+
+    // Only re-render if data actually changed — prevents scroll-jump on mobile
+    const newJson = JSON.stringify(newEvents);
+    if (newJson === this._eventsJson && newDate === this._currentDate) return;
+
+    this._eventsJson = newJson;
+    this._currentDate = newDate;
+    this._events = newEvents;
     this.render();
   }
 
