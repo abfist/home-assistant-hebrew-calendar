@@ -212,7 +212,9 @@ class HebrewCalendarTodayReminders(HebrewCalendarBaseSensor):
     def extra_state_attributes(self) -> Dict[str, Any]:
         """פרטי האירועים של היום."""
         if self._today_reminders:
-            names = "\n".join(f"{event.event_name} ({event.event_type})" for event in self._today_reminders)
+            names = "\n".join(
+                f"{event.event_name} ({event.event_type}) - בעוד {event.days_until} ימים" if event.days_until and event.days_until > 0
+                else f"{event.event_name} ({event.event_type}) - היום" for event in self._today_reminders)
             summary = f"תזכורות להיום:\n{names}"
         else:
             summary = "אין תזכורות להיום"
