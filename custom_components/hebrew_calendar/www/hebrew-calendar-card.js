@@ -87,6 +87,12 @@ class HebrewCalendarDialog extends HTMLElement {
     };
     if (year) data.hebrew_year = year;
 
+    const saveBtn = g('hc-save');
+    const cancelBtn = g('hc-cancel');
+    saveBtn.disabled = true;
+    cancelBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="hc-spinner"></span> שומר...';
+
     try {
       if (this._editingEvent) {
         await this._callService('edit_event', { event_id: this._editingEvent.id, ...data });
@@ -97,6 +103,9 @@ class HebrewCalendarDialog extends HTMLElement {
     } catch (e) {
       g('hc-error').textContent = 'שגיאה: ' + e.message;
       g('hc-error').style.display = 'block';
+      saveBtn.disabled = false;
+      cancelBtn.disabled = false;
+      saveBtn.textContent = 'שמור';
     }
   }
 
@@ -171,6 +180,11 @@ class HebrewCalendarDialog extends HTMLElement {
         .hc-tag{background:#f0f0f0;border-radius:16px;padding:3px 8px 3px 6px;
           font-size:.82em;display:inline-flex;align-items:center;gap:4px}
         .hc-tag-rm{background:none;border:none;cursor:pointer;color:#888;font-size:13px;padding:0}
+        .hc-save:disabled,.hc-cancel:disabled{opacity:.6;cursor:not-allowed}
+        .hc-spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.4);
+          border-top-color:#fff;border-radius:50%;animation:hc-spin .7s linear infinite;
+          vertical-align:middle;margin-left:4px}
+        @keyframes hc-spin{to{transform:rotate(360deg)}}
         #hc-error{color:red;font-size:.82em;background:#fff0f0;padding:6px;
           border-radius:4px;margin-top:8px;display:none}
         .hc-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
@@ -305,6 +319,8 @@ class HebrewCalendarCard extends HTMLElement {
   /** מחיקת אירוע */
   async _deleteEvent(id, name) {
     if (!confirm(`האם למחוק את "${name}"?`)) return;
+    const btn = this.shadowRoot.querySelector(`[data-del="${id}"]`);
+    if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
     await this._hass.callService(DOMAIN, 'remove_event', { event_id: id });
   }
 

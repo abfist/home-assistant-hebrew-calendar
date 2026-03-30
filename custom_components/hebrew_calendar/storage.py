@@ -108,7 +108,12 @@ class HebrewCalendarStorage:
 
     async def async_save(self) -> None:
         """שמירת כל האירועים לאחסון."""
-        await self._store.async_save({"events": {k: v.as_dict() for k, v in self._events.items()}})
+        # as_dict() calls pyluach (CPU-bound) — run off the event loop to avoid timeouts
+        events_snapshot = dict(self._events)
+        serialized = await self._hass.async_add_executor_job(
+            lambda: {k: v.as_dict() for k, v in events_snapshot.items()}
+        )
+        await self._store.async_save({"events": serialized})
 
     async def async_get_events(self) -> List[Event]:
         """
@@ -143,7 +148,9 @@ class HebrewCalendarStorage:
             מזהה האירוע החדש
         """
         event_id = str(uuid.uuid4())
-        validation_error = self.validate_event_data(event_data)
+        validation_error = await self._hass.async_add_executor_job(
+            self.validate_event_data, event_data
+        )
         if validation_error:
             _LOGGER.error("Invalid event data: %s", validation_error)
             raise ValueError(validation_error)
@@ -168,7 +175,9 @@ class HebrewCalendarStorage:
             _LOGGER.warning("Tried to edit non-existent event: %s", event_id)
             return False
         
-        validation_error = self.validate_event_data(event_data)
+        validation_error = await self._hass.async_add_executor_job(
+            self.validate_event_data, event_data
+        )
         if validation_error:
             _LOGGER.error("Invalid event data on edit: %s", validation_error)
             raise ValueError(validation_error)
